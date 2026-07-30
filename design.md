@@ -21,6 +21,7 @@
     - circular
     - size of analysis window size
     - seperate buffer for each channel (unless averaged)
+  - potentially, different buffers for different notes (e.g. a 20hz base note will not be observable in a 1/100th of a second window )
 
 - transformer requirements
   - perform FFT across analysis window buffer
@@ -45,8 +46,9 @@
     - pick 1
   - output
     - number of output samples (how many k will be in the FFT output)
-    - output distribution option (e.g. equidistant, exponential) (what k in the FFT will end up being)
-    - output range (likely human hearing range like 20hz to 20khz)
+    - output
+      - musical notes
+      - octaves and semitons
 
 - overall requirements
   - modularity
@@ -61,3 +63,8 @@
     - average
     - display seperately
     - pick 1
+
+
+
+audio samples
+- start in 

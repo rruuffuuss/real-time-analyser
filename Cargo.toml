@@ -9,5 +9,6 @@ config = { version = "0.15.25", default-features = false, features = ["yaml"] }
 crossterm = "0.29.0"
 libspa = "0.10.0"
 pipewire = "0.10.0"
+realfft = "3.5.0"
 rustfft = "6.4.1"
 serde = { version = "1.0.229", features = ["derive"] }

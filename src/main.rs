@@ -1,5 +1,5 @@
 mod captor;
-mod controller;
+mod control;
 mod display;
 mod normaliser;
 mod settings;
@@ -11,7 +11,17 @@ use std::path::PathBuf;
 use clap::Parser;
 use crossterm::terminal;
 
-use crate::controller::Controller;
+use crate::{
+    control::{
+        control_core::ControlCore,
+        decimating::{
+            self,
+            controller::DecimatingController,
+            fir_filter::{self, FirFilter},
+        },
+    },
+    transform::{merger::ExponentialMerger, transformer},
+};
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
@@ -25,19 +35,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let settings = settings::Settings::load(&args.config)?;
 
-    let (terminal_width, terminal_height) = terminal::size()?;
-
-    let controller = Controller::new(
-        terminal_height,
-        terminal_width,
-        settings.sample_window,
+    let control_core = ControlCore::new(
+        settings.transform_size,
         settings.sample_rate,
         settings.framerate,
-        settings.min_frequency,
-        settings.max_frequency,
+        settings.display,
         settings.merger,
-        controller::Mode::Monolithic,
     );
+
+    let fir_filter = FirFilter::new(51, 0.54_f64, fir_filter::Window::Blackman);
+
+    let mut controller = DecimatingController::new(control_core, fir_filter, 6, 6);
 
     controller.run();
 

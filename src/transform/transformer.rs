@@ -1,58 +1,44 @@
 use crate::transform::merger::Merger;
 
-use rustfft::{Fft, FftPlanner, num_complex::Complex};
+use realfft::{RealFftPlanner, RealToComplex};
+use rustfft::num_complex::Complex;
 use std::sync::Arc;
 
 pub struct Transformer {
-    input_samples: usize,
+    pub(super) input_samples: usize,
     merger: Box<dyn Merger>,
-    fft: Arc<dyn Fft<f32>>,
-    input_buffer: Vec<Complex<f32>>,
+    fft: Arc<dyn RealToComplex<f32>>,
+    scratch: Box<Vec<Complex<f32>>>,
+    output: Box<Vec<Complex<f32>>>,
 }
 
 impl Transformer {
     pub fn new(input_samples: usize, merger: Box<dyn Merger>) -> Self {
-        let mut planner = FftPlanner::new();
+        let mut planner = RealFftPlanner::new();
         let fft = planner.plan_fft_forward(input_samples);
-        let input_buffer = vec![Complex::new(0.0, 0.0); input_samples];
+
+        let scratch = Box::new(fft.make_scratch_vec());
+        let output = Box::new(fft.make_output_vec());
 
         Self {
             input_samples,
             merger,
             fft,
-            input_buffer,
+            scratch,
+            output,
         }
     }
 
-    /// same as transform but supports split slices as output from a VecDeque
-    pub fn transform_split(&mut self, input: (&[f32], &[f32])) -> Vec<f32> {
-        //copy the input into the real part of complex numbers in the input buffer
-        self.input_buffer
-            .iter_mut()
-            .zip(input.0.iter().chain(input.1.iter()))
-            .for_each(|(b, i)| *b = Complex::new(*i, 0.0));
-
-        self._transform_inner()
-    }
-
-    pub fn transform(&mut self, input: &[f32]) -> Vec<f32> {
-        // copy the input into the real part of complex numbers in the input buffer
-        self.input_buffer
-            .iter_mut()
-            .zip(input.iter())
-            .for_each(|(b, i)| *b = Complex::new(*i, 0.0));
-
-        self._transform_inner()
-    }
-
-    pub fn _transform_inner(&mut self) -> Vec<f32> {
-        if self.input_buffer.len() != self.input_samples {
+    #[inline(always)]
+    pub fn transform(&mut self, input: &mut [f32], spectrum: &mut [f32]) {
+        /*if self.input_buffer.len() != self.input_samples {
             panic!("input size is unexpected")
-        };
+        };*/
 
-        self.fft.process(&mut self.input_buffer);
+        self.fft
+            .process_with_scratch(input, &mut self.output, &mut self.scratch);
 
-        self.merger.merge(&self.input_buffer)
+        self.merger.merge_into_slice(&self.output, spectrum)
     }
 }
 
@@ -64,7 +50,7 @@ mod tests {
 
     #[test]
     fn test_single_frequency_7_hz() {
-        let input = vec![
+        let mut input = vec![
             0.0_f32, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0,
             0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0, 0.0,
         ];
@@ -74,7 +60,8 @@ mod tests {
             Box::new(LinearMerger::new(input.len(), input.len() / 2)),
         );
 
-        let result = t.transform(&input);
+        let mut result = vec![0_f32; input.len() / 2 + 1];
+        t.transform(&mut input, &mut result);
 
         print!("{:?}", result);
 
@@ -88,6 +75,7 @@ mod tests {
         assert_eq!(7_usize, max_index)
     }
 
+    /*
     #[test]
     fn test_single_frequency_7_hz_split_slices() {
         let input1 = vec![0.0_f32, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0];
@@ -118,4 +106,5 @@ mod tests {
 
         assert_eq!(7_usize, max_index)
     }
+    */
 }

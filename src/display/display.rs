@@ -102,6 +102,7 @@ impl Display {
             .expect("error drawing the frame, you string was likely malformed");
     }
 
+    #[inline(always)]
     pub fn ideal_bar_count(&self) -> usize {
         self.width as usize
     }

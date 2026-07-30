@@ -9,7 +9,7 @@ impl Normaliser {
         }
     }
 
-    pub fn normalise(&mut self, bars: &mut Vec<f32>) {
+    pub fn normalise(&mut self, bars: &mut [f32]) {
         let mut max: f32 = 0.0;
 
         bars.iter_mut().enumerate().for_each(|(i, b)| {

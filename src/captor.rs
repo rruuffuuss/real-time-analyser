@@ -24,16 +24,15 @@ use std::sync::mpsc::Sender;
 
 struct UserData {
     format: spa::param::audio::AudioInfoRaw,
-    capture_buffer: Vec<f32>,
+    capture_buffer: VecDeque<f32>,
+    capture_size: usize,
     //pw_quantum: usize,
-    fresh_tx: Sender<VecDeque<f32>>,
-    completed_rx: Receiver<VecDeque<f32>>,
-
-    samples_per_frame: usize,
+    fresh_tx: Sender<Box<[f32]>>,
+    completed_rx: Receiver<Box<[f32]>>,
 }
 
 /// This is basically useless for current implementation. Will become useful in future. Good to know its working.
-fn setup_buffer(user_data: &mut UserData, pw_buffer: *mut pw_buffer, target_framerate: &u16) {
+fn setup_buffer(user_data: &mut UserData, pw_buffer: *mut pw_buffer) {
     // PipeWire supplies a valid pw_buffer
     let max_size = unsafe {
         let Some(pw_buffer) = pw_buffer.as_ref() else {
@@ -51,23 +50,7 @@ fn setup_buffer(user_data: &mut UserData, pw_buffer: *mut pw_buffer, target_fram
         let Some(datas_ptr) = spa_buffer.datas.as_ref() else {
             return;
         };
-
-        let datas = slice::from_raw_parts(datas_ptr, spa_buffer.n_datas as usize);
-
-        datas
-            .iter()
-            .map(|data| data.maxsize as usize)
-            .max()
-            .unwrap_or(0)
     };
-
-    user_data.samples_per_frame = (user_data.format.rate() / *target_framerate as u32) as usize;
-
-    //user_data.pw_quantum = max_size;
-    // capture buffer will never be more than max_size longer than samples per frame
-    user_data
-        .capture_buffer
-        .reserve(user_data.samples_per_frame as usize + max_size);
 }
 
 fn capture_samples(stream: &Stream, user_data: &mut UserData) {
@@ -100,15 +83,15 @@ fn capture_samples(stream: &Stream, user_data: &mut UserData) {
                 );
 
                 // the main thread should have finished transforming and displaying the data & return the freed slice
-                if user_data.capture_buffer.len() > user_data.samples_per_frame
-                    && let Ok(mut buffer) = user_data.completed_rx.try_recv()
+                if user_data.capture_buffer.len() > user_data.capture_size
+                    && let Ok(mut transfer_buffer) = user_data.completed_rx.try_recv()
                 {
-                    buffer.drain(..(user_data.capture_buffer.len()));
-                    buffer.extend(user_data.capture_buffer.iter());
+                    transfer_buffer
+                        .iter_mut()
+                        .zip(user_data.capture_buffer.drain(..user_data.capture_size))
+                        .for_each(|(t, c)| *t = c);
 
-                    user_data.capture_buffer.clear();
-
-                    user_data.fresh_tx.send(buffer).unwrap();
+                    user_data.fresh_tx.send(transfer_buffer).unwrap();
                 }
             }
         }
@@ -151,9 +134,9 @@ fn param_changed(user_data: &mut UserData, id: u32, param: Option<&Pod>) {
 
 pub fn run(
     //channel_map: Vec<(Vec<u8>, u8)>,
-    target_framerate: u16,
-    fresh_tx: Sender<VecDeque<f32>>,
-    completed_rx: Receiver<VecDeque<f32>>,
+    capture_size: usize,
+    fresh_tx: Sender<Box<[f32]>>,
+    completed_rx: Receiver<Box<[f32]>>,
 ) -> Result<(), pw::Error> {
     pw::init();
 
@@ -199,18 +182,16 @@ pub fn run(
 
     let data = UserData {
         format: Default::default(),
-        capture_buffer: Vec::new(),
+        capture_buffer: VecDeque::new(),
+        capture_size,
         //pw_quantum: 0,
         fresh_tx,
         completed_rx,
-        samples_per_frame: 0,
     };
 
     let _listener = stream
         .add_local_listener_with_user_data(data)
-        .add_buffer(move |_, user_data, pw_buffer| {
-            setup_buffer(user_data, pw_buffer, &target_framerate)
-        })
+        .add_buffer(move |_, user_data, pw_buffer| setup_buffer(user_data, pw_buffer))
         .param_changed(|_, user_data, id, param| param_changed(user_data, id, param))
         .process(move |stream, user_data| capture_samples(stream, user_data))
         .register()?;

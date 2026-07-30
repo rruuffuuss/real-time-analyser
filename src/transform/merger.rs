@@ -2,6 +2,7 @@ use rustfft::num_complex::Complex;
 
 pub trait Merger {
     fn merge(&self, frequency_bins: &[Complex<f32>]) -> Vec<f32>;
+    fn merge_into_slice(&self, frequency_bins: &[Complex<f32>], output: &mut [f32]);
 }
 
 ///linear mode where each output 'bar' is created via averaging a fixed number of fft 'frequency bins'
@@ -21,6 +22,15 @@ impl Merger for LinearMerger {
             .chunks_exact(self.bins_per_bar)
             .map(|bins| bins.iter().map(|bin| bin.norm_sqr()).sum::<f32>())
             .collect()
+    }
+
+    fn merge_into_slice(&self, frequency_bins: &[Complex<f32>], output: &mut [f32]) {
+        frequency_bins[..self.useful_bins]
+            .chunks_exact(self.bins_per_bar)
+            .zip(output)
+            .for_each(|(i, o)| {
+                *o = i.iter().map(|bin| bin.norm_sqr()).sum::<f32>();
+            });
     }
 }
 
@@ -74,6 +84,23 @@ impl Merger for ExponentialMerger {
         }
 
         bars
+    }
+
+    fn merge_into_slice(&self, frequency_bins: &[Complex<f32>], output: &mut [f32]) {
+        let mut start: usize = self.start_bin;
+        let mut end: usize = start;
+
+        for (bar_width, output) in self.bins_per_bar.iter().zip(output.iter_mut()) {
+            end += bar_width;
+            *output = {
+                frequency_bins[start..end]
+                    .iter()
+                    .map(|c| c.norm_sqr())
+                    .sum::<f32>()
+                    / bar_width.clone() as f32
+            };
+            start = end;
+        }
     }
 }
 
