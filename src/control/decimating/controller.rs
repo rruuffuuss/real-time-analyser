@@ -102,11 +102,13 @@ impl DecimatingController {
 
             cur_chunk = 0;
 
-            //goal is to replace samples in each chunk that have already been used for decimation into the following chunk
-            //we also want to stop decimating when we have run out of "fresh samples"
+            while cur_chunk < decimations - 1 {
+                let (target, source) = sample_buffer
+                    .split_at_mut((cur_chunk + 1) * chunk_size + tap_num + decimation_size);
 
-            //whilst a < 2^(b+1) we decimate into the second half of the next chunk (thus filling the chunk with fresh values, ready for another decimation)
-            while cycle % (2 << (cur_chunk + 1)) == 0 && cur_chunk < decimations - 1 {
+                target[(cur_chunk + 1) * chunk_size + tap_num..]
+                    .copy_from_slice(&source[..decimation_size]);
+
                 let (target, source) = sample_buffer
                     .split_at_mut((cur_chunk + 1) * chunk_size + tap_num + decimation_size);
 
@@ -132,45 +134,23 @@ impl DecimatingController {
                 cur_chunk += 1;
             }
 
-            //on the last decimation (when a = 2^(b+1)) we decimate into the first half of the next chunk (there will be no further decimations, as the 2nd half is required)
-            if cur_chunk < decimations - 1 {
-                let (source, target) = sample_buffer.split_at_mut((cur_chunk + 1) * chunk_size);
+            // transform each chunk
+            // will need to update merger for this to result in a normal spectrum
+            // only iterate chunks that have been fully updated with freshly decimated samples
+            spectrum_data
+                .chunks_exact_mut(spectrum_chunk_size)
+                .zip(
+                    sample_buffer[hidden_decimations..cur_chunk * chunk_size]
+                        .chunks_exact_mut(chunk_size)
+                        .rev(),
+                )
+                .for_each(|(s, f)| transformer.transform(&mut f[tap_num..], s));
 
-                //decimate into the first half
-                self.decimate(
-                    tap_num,
-                    // decimate from the current buffer
-                    &source[(cur_chunk * chunk_size)..],
-                    // into the first half of the next buffer
-                    &mut target[tap_num..tap_num + decimation_size],
-                );
-            }
-
-            if cur_chunk > hidden_decimations {
-                let fresh_spectrum_chunks = (self.displayed_decimations
-                    - (cur_chunk - hidden_decimations))
-                    * spectrum_chunk_size;
-
-                // transform each chunk
-                // will need to update merger for this to result in a normal spectrum
-                // only iterate chunks that have been fully updated with freshly decimated samples
-                spectrum_data[fresh_spectrum_chunks..]
-                    .chunks_exact_mut(spectrum_chunk_size)
-                    .zip(
-                        sample_buffer[hidden_decimations..cur_chunk * chunk_size]
-                            .chunks_exact_mut(chunk_size)
-                            .rev(),
-                    )
-                    .for_each(|(s, f)| transformer.transform(&mut f[tap_num..], s));
-
-                if cycle % cycles_per_frame == 0 {
-                    self.control_core
-                        .normaliser
-                        .normalise(&mut spectrum_data[fresh_spectrum_chunks..]);
-                    self.control_core
-                        .display
-                        .display(&spectrum_data[..self.control_core.display.ideal_bar_count()]);
-                }
+            if cycle % cycles_per_frame == 0 {
+                self.control_core.normaliser.normalise(&mut spectrum_data);
+                self.control_core
+                    .display
+                    .display(&spectrum_data[..self.control_core.display.ideal_bar_count()]);
             }
 
             cycle += 1;
