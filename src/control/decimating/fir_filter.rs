@@ -13,7 +13,6 @@ pub struct FirFilter {
 
 impl FirFilter {
     pub fn new(taps: u32, normalised_cutoff: f64, window_function: Window) -> FirFilter {
-        let normalised_cutoff = normalised_cutoff * 2_f64;
         let centre = (((taps - 1) / 2) as u32) as f64;
 
         let ideal_iir = |n: f64| sinc_cutoff(n - centre, normalised_cutoff);
