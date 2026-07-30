@@ -140,7 +140,7 @@ impl DecimatingController {
             spectrum_data
                 .chunks_exact_mut(spectrum_chunk_size)
                 .zip(
-                    sample_buffer[hidden_decimations..cur_chunk * chunk_size]
+                    sample_buffer[hidden_decimations..decimations]
                         .chunks_exact_mut(chunk_size)
                         .rev(),
                 )
