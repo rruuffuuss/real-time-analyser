@@ -31,6 +31,8 @@ impl Controller for MonolithicController {
         let mut transform_buffer = VecDeque::from(vec![0_f32; (self.control_core.transform_size)]);
         transform_buffer.reserve(self.control_core.transform_size * 2);
 
+        let mut transform_temp = vec![0_f32; self.control_core.transform_size];
+
         let mut spectrum_data = vec![0_f32; self.control_core.display.ideal_bar_count()];
 
         let capture_buffer = vec![0_f32; samples_per_frame];
@@ -48,9 +50,16 @@ impl Controller for MonolithicController {
 
             // recieve fresh audio samples & capture thread builds capture buffer whilst we FFT
 
+            //copy the transform buffer contiguously into transform temp
+            //same amount of copying as make_contiguous but avoids buffer damage from fft treating input as scratch
+            let (b1, b2) = transform_buffer.as_slices();
+            transform_temp
+                .iter_mut()
+                .zip(b1.iter().chain(b2.iter()))
+                .for_each(|(t, b)| *t = *b);
             self.control_core
                 .transformer
-                .transform(transform_buffer.make_contiguous(), &mut spectrum_data);
+                .transform(&mut transform_temp, &mut spectrum_data);
 
             self.control_core.normaliser.normalise(&mut spectrum_data);
             self.control_core

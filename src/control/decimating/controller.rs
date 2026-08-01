@@ -73,6 +73,8 @@ impl Controller for DecimatingController {
         let mut spectrum_data = vec![0_f32; self.control_core.display.ideal_bar_count()];
         let transfer_buffer = vec![0_f32; self.control_core.transform_size];
 
+        let mut fft_buffer = vec![0_f32; self.control_core.transform_size];
+
         let mut cycle = 1;
         let mut cur_chunk;
 
@@ -139,9 +141,9 @@ impl Controller for DecimatingController {
                         .rev(),
                 )
                 .for_each(|(s, f)| {
-                    self.control_core
-                        .transformer
-                        .transform(&mut f[tap_num..], s)
+                    fft_buffer.clone_from_slice(&f[tap_num..]);
+
+                    self.control_core.transformer.transform(&mut fft_buffer, s)
                 });
 
             if cycle % cycles_per_frame == 0 {
