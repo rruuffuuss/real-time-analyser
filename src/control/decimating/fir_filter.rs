@@ -1,5 +1,8 @@
 use std::f64;
 
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
 pub enum Window {
     Rectangular,
     Triangular,

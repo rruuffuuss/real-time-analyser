@@ -26,7 +26,7 @@ impl Normaliser {
 
 #[cfg(test)]
 mod tests {
-    use crate::normaliser::{self, Normaliser};
+    use crate::normaliser::Normaliser;
 
     fn normalisation_test(
         input: &mut Vec<f32>,
