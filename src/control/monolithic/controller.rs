@@ -1,8 +1,7 @@
 use crate::captor;
-use crate::display::display::Display;
-use crate::display::display_settings::DisplaySettings;
+use crate::control::Controller;
 
-use super::control_core::ControlCore;
+use crate::control::core::core::ControlCore;
 
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -19,33 +18,34 @@ impl MonolithicController {
     pub fn new(control_core: ControlCore) -> Self {
         Self { control_core }
     }
+}
 
-    pub fn run(&mut self) {
-        let (fresh_tx, fresh_rx): (Sender<VecDeque<f32>>, Receiver<VecDeque<f32>>) =
-            mpsc::channel();
-        let (stale_tx, stale_rx): (Sender<VecDeque<f32>>, Receiver<VecDeque<f32>>) =
-            mpsc::channel();
+impl Controller for MonolithicController {
+    fn run(&mut self) {
+        let (fresh_tx, fresh_rx): (Sender<Vec<f32>>, Receiver<Vec<f32>>) = mpsc::channel();
+        let (stale_tx, stale_rx): (Sender<Vec<f32>>, Receiver<Vec<f32>>) = mpsc::channel();
 
-        let transform_buffer = VecDeque::from(vec![0.0_f32; self.control_core.sample_window]);
+        let samples_per_frame =
+            (self.control_core.sample_rate / self.control_core.target_framerate as u32) as usize;
 
-        stale_tx.send(transform_buffer).unwrap();
+        let mut transform_buffer =
+            VecDeque::from(vec![0_f32; (self.control_core.transform_size) * 2]);
 
-        let framerate = self.control_core.target_framerate;
+        let mut spectrum_data = vec![0_f32; self.control_core.display.ideal_bar_count()];
 
-        thread::spawn(move || {
-            captor::run(
-                self.control_core.transform_size / framerate,
-                fresh_tx,
-                stale_rx,
-            )
-        });
+        let capture_buffer = vec![0_f32; samples_per_frame];
+
+        stale_tx.send(capture_buffer).unwrap();
+        thread::spawn(move || captor::run(samples_per_frame, fresh_tx, stale_rx));
 
         for recieved in fresh_rx {
+            transform_buffer.extend(&recieved);
+
             // recieve fresh audio samples & capture thread builds capture buffer whilst we FFT
-            let mut spectrum_data = self
-                .control_core
+
+            self.control_core
                 .transformer
-                .transform_split(recieved.as_slices());
+                .transform(transform_buffer.make_contiguous(), &mut spectrum_data);
 
             // we return empty buffer which can be filled whilst we normalise & draw
             stale_tx.send(recieved).unwrap();

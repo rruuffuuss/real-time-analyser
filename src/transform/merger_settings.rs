@@ -17,12 +17,7 @@ pub enum MergerSettings {
 }
 
 impl MergerSettings {
-    pub fn build(
-        &self,
-        input_bins: usize,
-        output_bars: usize,
-        sample_rate: u32,
-    ) -> Box<dyn Merger> {
+    pub fn build(self, input_bins: usize, output_bars: usize, sample_rate: u32) -> Box<dyn Merger> {
         match self {
             Self::Linear {} => Box::new(LinearMerger::new(input_bins, output_bars)),
             Self::Exponential {
@@ -33,17 +28,47 @@ impl MergerSettings {
                 input_bins,
                 output_bars,
                 sample_rate,
-                *tuning_frequency,
-                *bars_per_octave,
-                *starting_note_offset,
+                tuning_frequency,
+                bars_per_octave,
+                starting_note_offset,
             )),
         }
     }
-}
 
-impl Default for MergerSettings {
-    fn default() -> Self {
-        Self::Linear {}
+    //called for decimating controller construction where each octave must be merged seperately & uniformly
+    pub fn build_single_octave(
+        mut self,
+        input_bins: usize,
+        new_bars_per_octave: isize,
+        sample_rate: u32,
+    ) -> Box<dyn Merger> {
+        if let MergerSettings::Exponential {
+            tuning_frequency,
+            bars_per_octave,
+            starting_note_offset,
+        } = &mut self
+        {
+            {
+                *bars_per_octave = new_bars_per_octave as usize;
+                *starting_note_offset = -1 * new_bars_per_octave;
+            }
+        }
+
+        self.build(input_bins, new_bars_per_octave as usize, sample_rate)
+    }
+
+    pub fn set_octave_uniform(&mut self, new_bars_per_octave: isize) {
+        if let MergerSettings::Exponential {
+            tuning_frequency,
+            bars_per_octave,
+            starting_note_offset,
+        } = self
+        {
+            {
+                *bars_per_octave = new_bars_per_octave as usize;
+                *starting_note_offset = -1 * new_bars_per_octave;
+            }
+        }
     }
 }
 
@@ -62,11 +87,9 @@ const fn default_tuning_frequency() -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::*;
     use config::{Config, ConfigError, File, FileFormat};
-    use std::path::Path;
 
-    fn parse(yaml: &str) -> Result<Settings, ConfigError> {
+    fn parse(yaml: &str) -> Result<MergerSettings, ConfigError> {
         Config::builder()
             .add_source(File::from_str(yaml, FileFormat::Yaml))
             .build()?
@@ -75,28 +98,21 @@ mod tests {
 
     #[test]
     fn loads_linear_settings_and_defaults() {
-        let settings = parse("merger:\n  type: linear\n").unwrap();
+        let settings = parse("type: linear\n").unwrap();
 
         //assert_eq!(settings.sample_window, 4096);
-        assert!(matches!(settings.merger, MergerSettings::Linear {}));
-    }
-
-    #[test]
-    fn example_configuration_loads() {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("config.yaml");
-
-        Settings::load(&path).unwrap();
+        assert!(matches!(settings, MergerSettings::Linear {}));
     }
 
     #[test]
     fn loads_exponential_settings() {
         let settings = parse(
-            "merger:\n  type: exponential\n  tuning_frequency: 432.0\n  bars_per_octave: 24\n  starting_note_offset: -72\n",
+            "type: exponential\ntuning_frequency: 432.0\nbars_per_octave: 24\nstarting_note_offset: -72\n",
         )
         .unwrap();
 
         assert!(matches!(
-            settings.merger,
+            settings,
             MergerSettings::Exponential {
                 tuning_frequency: 432.0,
                 bars_per_octave: 24,
@@ -107,7 +123,7 @@ mod tests {
 
     #[test]
     fn rejects_settings_for_the_wrong_merger() {
-        let result = parse("merger:\n  type: linear\n  bars_per_octave: 12\n");
+        let result = parse("type: linear\nbars_per_octave: 12\n");
 
         assert!(result.is_err());
     }

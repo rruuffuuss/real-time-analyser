@@ -28,10 +28,10 @@ impl Default for DisplaySettings {
 
 #[cfg(test)]
 mod tests {
-    use crate::settings::*;
+    use super::*;
     use config::{Config, ConfigError, File, FileFormat};
 
-    fn parse(yaml: &str) -> Result<Settings, ConfigError> {
+    fn parse(yaml: &str) -> Result<DisplaySettings, ConfigError> {
         Config::builder()
             .add_source(File::from_str(yaml, FileFormat::Yaml))
             .build()?
@@ -40,16 +40,16 @@ mod tests {
 
     #[test]
     fn loads_display_settings() {
-        let settings = parse("display:\n  display_width: 3\n  display_height: 2\n").unwrap();
+        let settings = parse("display_width: 3\ndisplay_height: 2\n").unwrap();
 
-        assert_eq!(settings.display.display_width, 3);
-        assert_eq!(settings.display.display_height, 2);
+        assert_eq!(settings.display_width, 3);
+        assert_eq!(settings.display_height, 2);
     }
 
     #[test]
     fn builds_display_with_configured_dimensions() {
-        let settings = parse("display:\n  display_width: 3\n  display_height: 2\n").unwrap();
-        let mut display = settings.display.build();
+        let settings = parse("display_width: 3\ndisplay_height: 2\n").unwrap();
+        let mut display = settings.build();
 
         assert_eq!(display.ideal_bar_count(), 3);
         assert_eq!(display.render_frame(&[0.0; 3]), "\x1b[H   \r\n   ");
@@ -57,7 +57,7 @@ mod tests {
 
     #[test]
     fn rejects_unknown_display_settings() {
-        let result = parse("display:\n  display_width: 3\n  display_height: 2\n  colour: blue\n");
+        let result = parse("display_width: 3\ndisplay_height: 2\ncolour: blue\n");
 
         assert!(result.is_err());
     }
