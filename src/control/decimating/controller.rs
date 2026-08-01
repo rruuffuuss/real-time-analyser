@@ -86,43 +86,47 @@ impl Controller for DecimatingController {
 
         let (mut target, mut source): (&mut [f32], &mut [f32]);
 
-        for recieved in fresh_rx {
+        for mut recieved in fresh_rx {
             //may need to update the "partially used tap sample" logic if FFT mutates input chunks
 
-            //position incoming samples correctly in buffer
-            sample_buffer[tap_num..transform_size + tap_num].copy_from_slice(&recieved);
-            stale_tx.send(recieved).unwrap();
+            for recieved_chunk in recieved.chunks_exact(transform_size) {
+                //position incoming samples correctly in buffer
+                sample_buffer[tap_num..transform_size + tap_num].copy_from_slice(recieved_chunk);
 
-            cur_chunk = 0;
+                cur_chunk = 0;
 
-            while cur_chunk < decimations - 1 {
-                // move (copy) the existing samples in the the back half the next chunk to the front half
-                // front ..... back
-                //   ^^^^^^<-^^^^^^
-                (target, source) = sample_buffer
-                    .split_at_mut((cur_chunk + 1) * chunk_size + tap_num + decimation_size);
-                target[(cur_chunk + 1) * chunk_size + tap_num..]
-                    .copy_from_slice(&source[..decimation_size]);
+                while cur_chunk < decimations - 1 {
+                    // move (copy) the existing samples in the the back half the next chunk to the front half
+                    // front ..... back
+                    //   f^^^^l<-f^^^^l
+                    (target, source) = sample_buffer
+                        .split_at_mut((cur_chunk + 1) * chunk_size + tap_num + decimation_size);
+                    target[(cur_chunk + 1) * chunk_size + tap_num..]
+                        .copy_from_slice(&source[..decimation_size]);
 
-                // decimate into the back half of the next chunk
-                (source, target) = sample_buffer.split_at_mut((cur_chunk + 1) * chunk_size);
-                self.decimate(
-                    tap_num,
-                    // decimate from the current buffer
-                    &source[(cur_chunk * chunk_size)..],
-                    // into the second half of the next buffer
-                    &mut target[tap_num + decimation_size..chunk_size],
-                );
+                    // decimate into the back half of the next chunk
+                    (source, target) = sample_buffer.split_at_mut((cur_chunk + 1) * chunk_size);
+                    self.decimate(
+                        tap_num,
+                        // decimate from the current buffer
+                        &source[(cur_chunk * chunk_size)..],
+                        // into the second half of the next buffer
+                        &mut target[tap_num + decimation_size..chunk_size],
+                    );
 
-                // copy 'partially decimated' samples from the end front half of the chunk to the start
-                // since each sample is decimated twice in this algorithm (so that each stage is updated every cycle),
-                // these samples are located at the end of the front half, but were partially used when they were in the back half
-                (target, source) = sample_buffer.split_at_mut(chunk_size * cur_chunk + tap_num);
-                target[chunk_size * cur_chunk..]
-                    .copy_from_slice(&source[chunk_size - tap_num..chunk_size]);
+                    // copy 'partially decimated' samples from the end front half of the chunk to the start
+                    // since each sample is decimated twice in this algorithm (so that each stage is updated every cycle),
+                    // these samples are located at the end of the front half, but were partially used when they were in the back half
+                    (target, source) = sample_buffer.split_at_mut(chunk_size * cur_chunk + tap_num);
+                    target[chunk_size * cur_chunk..]
+                        .copy_from_slice(&source[chunk_size - tap_num..chunk_size]);
 
-                cur_chunk += 1;
+                    cur_chunk += 1;
+                }
             }
+
+            recieved.clear();
+            stale_tx.send(recieved).unwrap();
 
             // transform each chunk
             // will need to update merger for this to result in a normal spectrum

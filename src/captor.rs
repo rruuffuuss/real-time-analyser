@@ -18,7 +18,6 @@ use spa::pod::Pod;
 use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::mem;
-use std::slice;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
@@ -27,8 +26,8 @@ struct UserData {
     capture_buffer: VecDeque<f32>,
     capture_size: usize,
     //pw_quantum: usize,
-    fresh_tx: Sender<Box<[f32]>>,
-    completed_rx: Receiver<Box<[f32]>>,
+    fresh_tx: Sender<Vec<f32>>,
+    completed_rx: Receiver<Vec<f32>>,
 }
 
 /// This is basically useless for current implementation. Will become useful in future. Good to know its working.
@@ -83,13 +82,12 @@ fn capture_samples(stream: &Stream, user_data: &mut UserData) {
                 );
 
                 // the main thread should have finished transforming and displaying the data & return the freed slice
-                if user_data.capture_buffer.len() > user_data.capture_size
-                    && let Ok(mut transfer_buffer) = user_data.completed_rx.try_recv()
-                {
-                    transfer_buffer
-                        .iter_mut()
-                        .zip(user_data.capture_buffer.drain(..user_data.capture_size))
-                        .for_each(|(t, c)| *t = c);
+                if let Ok(mut transfer_buffer) = user_data.completed_rx.try_recv() {
+                    // extend the transfer buffer (& drain the capture buffer) with the largest multiple of capture size available
+                    transfer_buffer.extend(user_data.capture_buffer.drain(
+                        ..user_data.capture_size
+                            * (user_data.capture_buffer.len() / user_data.capture_size),
+                    ));
 
                     user_data.fresh_tx.send(transfer_buffer).unwrap();
                 }
@@ -135,8 +133,8 @@ fn param_changed(user_data: &mut UserData, id: u32, param: Option<&Pod>) {
 pub fn run(
     //channel_map: Vec<(Vec<u8>, u8)>,
     capture_size: usize,
-    fresh_tx: Sender<Box<[f32]>>,
-    completed_rx: Receiver<Box<[f32]>>,
+    fresh_tx: Sender<Vec<f32>>,
+    completed_rx: Receiver<Vec<f32>>,
 ) -> Result<(), pw::Error> {
     pw::init();
 

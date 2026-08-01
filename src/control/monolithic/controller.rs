@@ -28,8 +28,8 @@ impl Controller for MonolithicController {
         let samples_per_frame =
             (self.control_core.sample_rate / self.control_core.target_framerate as u32) as usize;
 
-        let mut transform_buffer =
-            VecDeque::from(vec![0_f32; (self.control_core.transform_size) * 2]);
+        let mut transform_buffer = VecDeque::from(vec![0_f32; (self.control_core.transform_size)]);
+        transform_buffer.reserve(self.control_core.transform_size * 2);
 
         let mut spectrum_data = vec![0_f32; self.control_core.display.ideal_bar_count()];
 
@@ -38,17 +38,19 @@ impl Controller for MonolithicController {
         stale_tx.send(capture_buffer).unwrap();
         thread::spawn(move || captor::run(samples_per_frame, fresh_tx, stale_rx));
 
-        for recieved in fresh_rx {
-            transform_buffer.extend(&recieved);
+        for mut recieved in fresh_rx {
+            // remove old samples from the transform buffer and drain the capture buffer into the transform buffer
+            transform_buffer.drain(..recieved.len());
+            transform_buffer.extend(recieved.drain(..));
+
+            // we return empty buffer which can be filled whilst we normalise & draw
+            stale_tx.send(recieved).unwrap();
 
             // recieve fresh audio samples & capture thread builds capture buffer whilst we FFT
 
             self.control_core
                 .transformer
                 .transform(transform_buffer.make_contiguous(), &mut spectrum_data);
-
-            // we return empty buffer which can be filled whilst we normalise & draw
-            stale_tx.send(recieved).unwrap();
 
             self.control_core.normaliser.normalise(&mut spectrum_data);
             self.control_core
