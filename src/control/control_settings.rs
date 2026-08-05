@@ -51,7 +51,7 @@ impl ControlSettings {
             } => {
                 let merger = merger_settings.build_single_octave(
                     core.transform_size,
-                    (display.ideal_bar_count() / displayed_decimations + 1) as isize,
+                    (display.ideal_bar_count() / (displayed_decimations)) as isize,
                     core.sample_rate,
                 );
 
