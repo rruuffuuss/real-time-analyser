@@ -40,11 +40,18 @@ impl Controller for MonolithicController {
         stale_tx.send(capture_buffer).unwrap();
         thread::spawn(move || captor::run(samples_per_frame, fresh_tx, stale_rx));
 
-        for mut recieved in fresh_rx {
-            // remove old samples from the transform buffer and drain the capture buffer into the transform buffer
-            transform_buffer.drain(..recieved.len());
-            transform_buffer.extend(recieved.drain(..));
+        let sample_num = self.control_core.transform_size.min(samples_per_frame);
 
+        for mut recieved in fresh_rx {
+            if recieved.len() == 0 {
+                stale_tx.send(recieved).unwrap();
+                continue;
+            }
+
+            // remove old samples from the transform buffer and drain the capture buffer into the transform buffer
+            transform_buffer.drain(..sample_num);
+            transform_buffer.extend(recieved.drain(..sample_num));
+            recieved.clear();
             // we return empty buffer which can be filled whilst we normalise & draw
             stale_tx.send(recieved).unwrap();
 
