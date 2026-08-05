@@ -3,7 +3,7 @@ use super::fir_filter::{FirFilter, Window};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct FirFilterSettings {
     #[serde(default = "default_taps")]
     taps: u32,
@@ -46,7 +46,7 @@ mod tests {
     #[test]
     fn loads_test_settings() {
         let settings =
-            parse("window_function: Blackman\ntaps: 131\nnormalised_cutoff: 0.5\n").unwrap();
+            parse("window_function: blackman\ntaps: 131\nnormalised_cutoff: 0.5\n").unwrap();
 
         assert!(matches!(
             settings,
