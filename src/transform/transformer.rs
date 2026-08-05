@@ -46,7 +46,8 @@ impl Transformer {
 mod tests {
 
     use super::*;
-    use crate::transform::merger::LinearMerger;
+    use crate::transform::linear_merger::LinearMerger;
+    use crate::transform::merger::{aggregator, realisor};
 
     #[test]
     fn test_single_frequency_7_hz() {
@@ -57,7 +58,12 @@ mod tests {
 
         let mut t = Transformer::new(
             input.len(),
-            Box::new(LinearMerger::new(input.len(), input.len() / 2)),
+            Box::new(
+                LinearMerger::<aggregator::Sum<realisor::MagnitudeSquared>>::new(
+                    input.len(),
+                    input.len() / 2,
+                ),
+            ),
         );
 
         let mut result = vec![0_f32; input.len() / 2 + 1];

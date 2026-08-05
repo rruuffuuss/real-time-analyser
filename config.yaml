@@ -1,5 +1,5 @@
 controller:
-  type: decimating # or linear
+  type: decimating # or monolithic
 
   # core information required for all controller types
   core:
@@ -15,7 +15,7 @@ controller:
   # Set up the half band FIR filter used with a decimating controller
   filter:
     # the window function
-    window_function: Blackman
+    window_function: blackman
     # the number of FIR filter taps
     taps: 131
     # ideal frequency cutoff relative to the Nyquist frequency
@@ -26,30 +26,43 @@ controller:
   # width_override:
   # height_override:
 
-# Linear merging simply averages an equal number of FFT output frequency "bins"
-# Visually, linear merging looks poor when used with a decimating controller, as output between decimation stages will overlap
-#
-# merger:
-#   type: linear
 
-# Exponential merging attempts to visually scale frequency spectrum data similarly to how it is heard
-# allows display of traditional musical tones and semitones
-# when used with a decimating controller, the tuning frequency should be set to the highest displayed octave
-# as each decimation lowers the analysis by 1 octave, the range of notes displayed is controlled by the number of decimations and the number of outputs (display bars)
-# hence bars_per_octave and starting_note_offset are ignored when a decimating controller is used
+
 merger:
-  type: exponential
 
-  # frequency of a note that all other notes will be set relative to
-  tuning_frequency: 8000
+  # The method used to "realise" a complex FFT output value back to a single float
+  # magnitude_squared, magnitude, real or imaginary
+  realisor: magnitude_squared
+  # The method used to aggregate multiple FFT output "bins" which correspond to a single displayed bar
+  # max, mean or sum
+  # due to normalisation sum yields the same result as mean when each output has the same number of input buckets (linear mode)
+  aggregator: mean
 
-  # the number of notes in an octave (i.e. the number of notes for each doubling of frequency)
-  # set this to 12 to display semitones or 6 to average to full tones etc
-  # this should be left to set automatically when used with a decimating controller
-  # bars_per_octave: 12
+  # The type of merger (Linear or Exponential) and any related arguments
+  merger_type:
 
-  # the number of bars below the tuning frequency your first note is
-  # this only really exists so that the tuning frequency can be set independently of the first note to display- e.g. tune A4 at 440hz but the "0th" note is A0 (offset -48) at 27.5hz
-  # there is no difference in practice between doing this and setting the tuning frequency at 27.5hz with zero offset
-  # this should be left to set automatically when used with a decimating controller
-  # starting_note_offset: -12
+    # Linear merging simply averages an equal number of FFT output frequency "bins"
+    # Visually, linear merging looks poor when used with a decimating controller, as output between decimation stages will overlap
+    #   type: linear
+
+    # Exponential merging attempts to visually scale frequency spectrum data similarly to how it is heard
+    # allows display of traditional musical tones and semitones
+    # when used with a decimating controller, the tuning frequency should be set to the highest displayed octave
+    # as each decimation lowers the analysis by 1 octave, the range of notes displayed is controlled by the number of decimations and the number of outputs (display bars)
+    # hence bars_per_octave and starting_note_offset are ignored when a decimating controller is used
+
+    type: exponential
+
+    # frequency of a note that all other notes will be set relative to
+    tuning_frequency: 8000
+
+    # the number of notes in an octave (i.e. the number of notes for each doubling of frequency)
+    # set this to 12 to display semitones or 6 to average to full tones etc
+    # this should be left to set automatically when used with a decimating controller
+    # bars_per_octave: 12
+
+    # the number of bars below the tuning frequency your first note is
+    # this only really exists so that the tuning frequency can be set independently of the first note to display- e.g. tune A4 at 440hz but the "0th" note is A0 (offset -48) at 27.5hz
+    # there is no difference in practice between doing this and setting the tuning frequency at 27.5hz with zero offset
+    # this should be left to set automatically when used with a decimating controller
+    # starting_note_offset: -12
