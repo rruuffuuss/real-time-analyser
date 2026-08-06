@@ -1,5 +1,5 @@
 use crate::display::display::Display;
-use crate::normaliser::Normaliser;
+use crate::normalise::normaliser::Normaliser;
 use crate::transform::merger::Merger;
 use crate::transform::transformer::Transformer;
 
@@ -31,7 +31,7 @@ impl ControlCore {
         display: Display,
         merger: Box<dyn Merger>,
     ) -> Self {
-        let mut normaliser = Normaliser::new(1.0_f32);
+        let mut normaliser = Normaliser::new(1.0_f32, 1.2, 0.1);
 
         let transformer = Transformer::new(transform_size, merger);
 

@@ -1,7 +1,7 @@
 mod captor;
 mod control;
 mod display;
-mod normaliser;
+mod normalise;
 mod settings;
 mod transform;
 
