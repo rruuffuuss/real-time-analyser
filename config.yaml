@@ -8,9 +8,9 @@ controller:
     framerate: 30
 
   # the number of times we recursively apply a half band low pass filter, effectively halving the nyquist frequency but doubling the observation window
-  decimations: 9
+  decimations: 7
   # the number of decimations to display. Initial decimations may yield frequency spectrum data higher than you require, but these decimations are still required to "get to" lower decimations
-  displayed_decimations: 9
+  displayed_decimations: 5
 
   # Set up the half band FIR filter used with a decimating controller
   filter:
@@ -21,10 +21,14 @@ controller:
     # ideal frequency cutoff relative to the Nyquist frequency
     normalised_cutoff: 0.5
 
-#display:
+display:
   # by default, the display will use the width and height of the terminal from the program is run.
-  # width_override:
-  # height_override:
+  # setting them manually will attempt to resize the terminal
+  # this may look very messy if it fails silently
+  # display_width:
+  # display_height:
+  #
+  bar_width: 1
 
 
 
@@ -68,6 +72,15 @@ merger:
     # starting_note_offset: -12
 
 
+
 normaliser:
-  type: constant
-  factor: 40
+  # use a constant factor when normalising output
+  #type: constant
+  #factor: 1000
+
+  # grow/decay the normalisation factor when the maximum in a given frame exceeds/falls under a set factor of the "set" maximum
+  # output is normalised so a full height bar = set maximum * growth_factor
+  # the "set maximum" is the most recent maximum to cause a change in growth and decay factors by exceeding or falling under the thresholds set by the previous one
+  type: factor
+  growth_factor: 2.0
+  decay_factor: 0.2

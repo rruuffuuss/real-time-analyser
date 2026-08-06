@@ -1,29 +1,60 @@
 use crate::display::display::Display;
-use crossterm::terminal;
+use crossterm::{execute, terminal};
 use serde::Deserialize;
+use std::io::{self, stdout};
 
 #[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct DisplaySettings {
+    #[serde(default = "default_width")]
     display_width: u16,
+    #[serde(default = "default_height")]
     display_height: u16,
+    #[serde(default = "default_bar_width")]
+    bar_width: u16,
 }
 
 impl DisplaySettings {
-    pub fn build(&self) -> Display {
-        Display::new(self.display_width, self.display_height)
+    pub fn build(mut self) -> Display {
+        execute!(
+            stdout(),
+            terminal::SetSize(self.display_width, self.display_height)
+        )
+        .unwrap_or_else(|error| {
+            eprintln!(
+                "using current terminal size as terminal resize failed: {}",
+                error
+            );
+            self.display_height = default_height();
+            self.display_width = default_width();
+        });
+
+        Display::new(self.display_width, self.display_height, self.bar_width)
     }
 }
 
 impl Default for DisplaySettings {
     fn default() -> Self {
-        let (display_width, display_height) = terminal::size().unwrap_or((80, 24));
-
         Self {
-            display_width,
-            display_height,
+            display_width: default_width(),
+            display_height: default_height(),
+            bar_width: default_bar_width(),
         }
     }
+}
+
+fn default_width() -> u16 {
+    let (display_width, _) = terminal::size().unwrap_or((80, 24));
+    display_width
+}
+
+fn default_height() -> u16 {
+    let (_, display_height) = terminal::size().unwrap_or((80, 24));
+    display_height
+}
+
+fn default_bar_width() -> u16 {
+    1
 }
 
 #[cfg(test)]

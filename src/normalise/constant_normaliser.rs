@@ -13,7 +13,7 @@ impl ConstantNormaliser {
 impl Normaliser for ConstantNormaliser {
     fn normalise(&mut self, bars: &mut [f32]) {
         bars.iter_mut().enumerate().for_each(|(i, b)| {
-            *b *= (i as f32) / self.factor;
+            *b = (*b / self.factor) * (i as f32);
         });
     }
 }

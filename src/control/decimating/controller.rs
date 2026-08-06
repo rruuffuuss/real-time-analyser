@@ -69,6 +69,11 @@ impl Controller for DecimatingController {
         let chunk_size = transform_size + tap_num;
         let spectrum_chunk_size =
             self.control_core.display.ideal_bar_count() / (self.displayed_decimations);
+        if spectrum_chunk_size == 0 {
+            panic!(
+                "Your current configuration would result in less than 1 bar for each decimation.\nReduce the number of decimations or increase the number of bars"
+            )
+        }
         let mut sample_buffer = vec![0_f32; chunk_size * decimations];
         let mut spectrum_data = vec![0_f32; self.control_core.display.ideal_bar_count()];
         let transfer_buffer = vec![0_f32; self.control_core.transform_size];

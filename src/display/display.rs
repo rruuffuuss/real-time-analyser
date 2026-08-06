@@ -23,15 +23,17 @@ pub struct Display {
     // easier to keep as f32 rather than convert for every input
     _height_multiplier: f32,
     _increment_multiplier: f32,
+    bar_width: u16,
 }
 
 impl Display {
-    pub fn new(width: u16, height: u16) -> Display {
+    pub fn new(width: u16, height: u16, bar_width: u16) -> Display {
         let mut _string_buffer = String::with_capacity((width * height) as usize);
+        let bar_count = width / bar_width;
         let mut _column_buffers: Vec<Vec<char>> =
-            (0..width).map(|_| vec![' '; height as usize]).collect();
+            (0..bar_count).map(|_| vec![' '; height as usize]).collect();
 
-        let heights = vec![0; width as usize];
+        let heights = vec![0; bar_count as usize];
         let increments = heights.clone();
         let _height_multiplier: f32 = height.into();
         let _increment_multiplier: f32 = (height * BLOCK.len() as u16).into();
@@ -45,6 +47,7 @@ impl Display {
             increments,
             _height_multiplier,
             _increment_multiplier,
+            bar_width,
         }
     }
 
@@ -53,6 +56,8 @@ impl Display {
             panic!("graph width cannot currently change at runtime")
         };
 
+        // construct vectors holding the heights of each bar
+        // heights consist of the number of characters high the bar is and the "increment" char to use
         input
             .iter()
             .zip(self.heights.iter_mut().zip(self.increments.iter_mut()))
@@ -67,7 +72,7 @@ impl Display {
             .zip(self.heights.iter().zip(self.increments.iter()))
         {
             let mut default = ' ';
-            for (char, row) in buffer.iter_mut().zip((0..self.height).rev()) {
+            for (char, row) in (buffer).iter_mut().zip((0..self.height).rev()) {
                 if row == *height {
                     *char = BLOCK[*increment as usize];
                     default = '█';
@@ -81,7 +86,9 @@ impl Display {
 
         for row in 0..self.height {
             for buffer in self._column_buffers.iter() {
-                self._string_buffer.push(buffer[row as usize]);
+                for _ in 0..self.bar_width {
+                    self._string_buffer.push(buffer[row as usize]);
+                }
             }
             self._string_buffer.push_str("\r\n");
         }
@@ -104,7 +111,7 @@ impl Display {
 
     #[inline(always)]
     pub fn ideal_bar_count(&self) -> usize {
-        self.width as usize
+        (self.width / self.bar_width) as usize
     }
 }
 
@@ -114,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_heights() {
-        let mut d = Display::new(5, 10);
+        let mut d = Display::new(5, 10, 1);
 
         let frame = d.render_frame(&vec![0.99_f32, 0.0, 0.7, 0.4, 0.9]);
 
@@ -137,7 +144,7 @@ mod tests {
 
     #[test]
     fn test_increments_and_heights() {
-        let mut d = Display::new(5, 10);
+        let mut d = Display::new(5, 10, 1);
 
         let frame = d.render_frame(&vec![0.778_f32, 0.0334, 0.7, 0.412, 0.978]);
 
@@ -153,6 +160,29 @@ mod tests {
             "█ ███\r\n",
             "█ ███\r\n",
             "█▃███",
+        ));
+
+        assert_eq!(&bars, frame)
+    }
+
+    #[test]
+    fn test_bar_width() {
+        let mut d = Display::new(15, 10, 3);
+
+        let frame = d.render_frame(&vec![0.778_f32, 0.0334, 0.7, 0.412, 0.978]);
+
+        let bars = String::from(concat!(
+            "\x1b[H",
+            "            ▇▇▇\r\n",
+            "            ███\r\n",
+            "▇▇▇         ███\r\n",
+            "███   ███   ███\r\n",
+            "███   ███   ███\r\n",
+            "███   ███▁▁▁███\r\n",
+            "███   █████████\r\n",
+            "███   █████████\r\n",
+            "███   █████████\r\n",
+            "███▃▃▃█████████",
         ));
 
         assert_eq!(&bars, frame)
