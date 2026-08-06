@@ -17,7 +17,7 @@ pub struct FirFilter {
 
 impl FirFilter {
     pub fn new(taps: u32, normalised_cutoff: f64, window_function: Window) -> FirFilter {
-        let centre = (((taps - 1) / 2) as u32) as f64;
+        let centre = ((taps - 1) as f64 / 2_f64);
 
         let ideal_iir = |n: f64| sinc_cutoff(n - centre, normalised_cutoff);
 
@@ -25,14 +25,22 @@ impl FirFilter {
 
         let window: WindowFunction = match window_function {
             Window::Rectangular => |_, _| 1_f64,
-            Window::Triangular => |n, taps| 1_f64 - (n - taps) / taps,
-            Window::Hann => {
-                |n, taps| 0.5_f64 - (0.5_f64 * f64::cos(2_f64 * f64::consts::PI * n / taps))
-            }
+            Window::Triangular => |n, taps| {
+                if taps <= 1.0 {
+                    1.0
+                } else {
+                    1.0 - (2.0 * n - (taps - 1.0)).abs() / (taps - 1.0)
+                }
+            },
+            Window::Hann => |n, taps| {
+                0.5_f64 - (0.5_f64 * f64::cos(2_f64 * f64::consts::PI * n / (taps - 1_f64)))
+            },
             Window::Blackman => |n, taps| {
                 (7938_f64 / 18608_f64)
-                    - (9240_f64 / 18608_f64) * f64::cos((2_f64 * f64::consts::PI * n) / taps)
-                    + (1430_f64 / 18608_f64) * f64::cos((4_f64 * f64::consts::PI * n) / taps)
+                    - (9240_f64 / 18608_f64)
+                        * f64::cos((2_f64 * f64::consts::PI * n) / (taps - 1_f64))
+                    + (1430_f64 / 18608_f64)
+                        * f64::cos((4_f64 * f64::consts::PI * n) / (taps - 1_f64))
             },
         };
 
