@@ -3,6 +3,7 @@ use super::{decimating, monolithic};
 use crate::control::Controller;
 use crate::control::decimating::fir_filter_settings::FirFilterSettings;
 use crate::display::display_settings::DisplaySettings;
+use crate::normalise::normaliser_settings::NormaliserSettings;
 use crate::transform::merger_settings::MergerSettings;
 
 use serde::Deserialize;
@@ -28,7 +29,10 @@ impl ControlSettings {
         self,
         display_settings: DisplaySettings,
         merger_settings: MergerSettings,
+        normaliser_settings: NormaliserSettings,
     ) -> Box<dyn Controller> {
+        let normaliser = normaliser_settings.build();
+
         let display = display_settings.build();
 
         match self {
@@ -40,7 +44,7 @@ impl ControlSettings {
                 );
 
                 Box::new(monolithic::controller::MonolithicController::new(
-                    core.build(display, merger),
+                    core.build(display, merger, normaliser),
                 ))
             }
             Self::Decimating {
@@ -56,7 +60,7 @@ impl ControlSettings {
                 );
 
                 Box::new(decimating::controller::DecimatingController::new(
-                    core.build(display, merger),
+                    core.build(display, merger, normaliser),
                     filter.build(),
                     decimations.clone(),
                     displayed_decimations.clone(),

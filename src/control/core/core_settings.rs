@@ -1,4 +1,6 @@
-use crate::{display::display::Display, transform::merger::Merger};
+use crate::{
+    display::display::Display, normalise::normaliser::Normaliser, transform::merger::Merger,
+};
 
 use super::core::ControlCore;
 
@@ -16,13 +18,19 @@ pub struct CoreSettings {
 }
 
 impl CoreSettings {
-    pub fn build(self, display: Display, merger: Box<dyn Merger>) -> ControlCore {
+    pub fn build(
+        self,
+        display: Display,
+        merger: Box<dyn Merger>,
+        normaliser: Box<dyn Normaliser>,
+    ) -> ControlCore {
         ControlCore::new(
             self.transform_size,
             self.sample_rate,
             self.framerate,
             display,
             merger,
+            normaliser,
         )
     }
 }

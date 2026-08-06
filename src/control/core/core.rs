@@ -14,7 +14,7 @@ pub struct ControlCore {
     /// down the line this may end up as functions defining the window size and frequency for each output bin individually
     /// would need to buffer for the largest
     pub(crate) display: Display,
-    pub(crate) normaliser: Normaliser,
+    pub(crate) normaliser: Box<dyn Normaliser>,
     /*///number of output graphs
     ///display_grid: (u8, u8),
     ///channel map for input channels to output graphs
@@ -30,9 +30,8 @@ impl ControlCore {
         target_framerate: u16,
         display: Display,
         merger: Box<dyn Merger>,
+        normaliser: Box<dyn Normaliser>,
     ) -> Self {
-        let mut normaliser = Normaliser::new(1.0_f32, 1.2, 0.1);
-
         let transformer = Transformer::new(transform_size, merger);
 
         Self {

@@ -66,3 +66,8 @@ merger:
     # there is no difference in practice between doing this and setting the tuning frequency at 27.5hz with zero offset
     # this should be left to set automatically when used with a decimating controller
     # starting_note_offset: -12
+
+
+normaliser:
+  type: constant
+  factor: 40

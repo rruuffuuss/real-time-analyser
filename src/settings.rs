@@ -5,6 +5,7 @@ use serde::Deserialize;
 
 use crate::control::control_settings::ControlSettings;
 use crate::display::display_settings::DisplaySettings;
+use crate::normalise::normaliser_settings::NormaliserSettings;
 use crate::transform::merger_settings::MergerSettings;
 
 #[derive(Debug, Deserialize)]
@@ -14,6 +15,8 @@ pub struct Settings {
     pub merger: MergerSettings,
     #[serde(default = "default_display")]
     pub display: DisplaySettings,
+    #[serde(default = "default_normaliser")]
+    pub normaliser: NormaliserSettings,
 }
 
 impl Settings {
@@ -27,6 +30,10 @@ impl Settings {
 
 fn default_display() -> DisplaySettings {
     DisplaySettings::default()
+}
+
+fn default_normaliser() -> NormaliserSettings {
+    NormaliserSettings::default()
 }
 
 #[cfg(test)]

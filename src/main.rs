@@ -22,7 +22,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let settings = settings::Settings::load(&args.config)?;
 
-    let mut controller = settings.controller.build(settings.display, settings.merger);
+    let mut controller =
+        settings
+            .controller
+            .build(settings.display, settings.merger, settings.normaliser);
 
     controller.run();
     Ok(())
