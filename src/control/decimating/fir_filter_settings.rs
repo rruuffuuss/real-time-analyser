@@ -12,16 +12,17 @@ use serde::Deserialize;
 pub struct FirFilterSettings {
     #[serde(default = "default_normalised_cutoff")]
     normalised_cutoff: f64,
+    #[serde(default = "default_taps")]
+    taps: u32,
     #[serde(default = "default_window_function")]
     window: WindowFunctionSettings,
 }
 
 impl FirFilterSettings {
     pub fn build(self) -> FirFilter {
-        let taps = self.window.samples;
-        let window = self.window.build_f64();
+        let window = self.window.build_f64_with_sample_count(self.taps);
 
-        FirFilter::new(taps, self.normalised_cutoff, window)
+        FirFilter::new(self.taps, self.normalised_cutoff, window)
     }
 }
 
@@ -29,9 +30,13 @@ const fn default_normalised_cutoff() -> f64 {
     0.5
 }
 
+const fn default_taps() -> u32 {
+    51
+}
+
 const fn default_window_function() -> WindowFunctionSettings {
     WindowFunctionSettings {
-        samples: 51,
+        samples: None,
         function: WindowFunction::Hann,
     }
 }
@@ -50,16 +55,18 @@ mod tests {
 
     #[test]
     fn loads_test_settings() {
-        let settings =
-            parse("window:\n    function: blackman\n    samples: 131\nnormalised_cutoff: 0.5\n")
-                .unwrap();
+        let settings = parse(
+            "window:\n    function: blackman\n    samples: 131\nnormalised_cutoff: 0.5\ntaps: 51\n",
+        )
+        .unwrap();
 
         assert!(matches!(
             settings,
             FirFilterSettings {
                 normalised_cutoff: 0.5,
+                taps: 51,
                 window: WindowFunctionSettings {
-                    samples: 131,
+                    samples: Some(131),
                     function: WindowFunction::Blackman
                 },
             }

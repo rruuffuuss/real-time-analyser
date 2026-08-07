@@ -6,17 +6,19 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct WindowFunctionSettings {
-    pub(crate) samples: u32,
+    pub(crate) samples: Option<u32>,
     #[serde(default = "default_window_function")]
     pub(crate) function: WindowFunction,
 }
 
 impl WindowFunctionSettings {
-    pub fn build_f32(self) -> Window<f32> {
+    pub fn build_f32_with_sample_count(mut self, samples: u32) -> Window<f32> {
+        self.samples = Some(samples);
         self.build_for::<f32>()
     }
 
-    pub fn build_f64(self) -> Window<f64> {
+    pub fn build_f64_with_sample_count(mut self, samples: u32) -> Window<f64> {
+        self.samples = Some(samples);
         self.build_for::<f64>()
     }
 
@@ -24,7 +26,10 @@ impl WindowFunctionSettings {
     where
         F: Float,
     {
-        self.function.build_window::<F>(self.samples)
+        let samples = self
+            .samples
+            .expect("missing sample count in window settings");
+        self.function.build_window::<F>(samples)
     }
 }
 
@@ -51,7 +56,7 @@ mod tests {
         assert!(matches!(
             settings,
             WindowFunctionSettings {
-                samples: 131,
+                samples: Some(131),
                 function: WindowFunction::Blackman,
             }
         ));

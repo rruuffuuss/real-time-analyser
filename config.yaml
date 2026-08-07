@@ -14,16 +14,17 @@ controller:
 
   # Set up the half band FIR filter used with a decimating controller
   filter:
+
     # ideal frequency cutoff relative to the Nyquist frequency
     normalised_cutoff: 0.5
 
+    # the number of FIR filter taps
+    taps: 131
+
     # set up the window function used with the half band filter
-    # the tap num for the FIR filter is equal to the number of samples in the window
     window:
       # the window function
       function: blackman
-      # the number of FIR filter taps
-      samples: 131
 
 display:
   # by default, the display will use the width and height of the terminal from the program is run.
