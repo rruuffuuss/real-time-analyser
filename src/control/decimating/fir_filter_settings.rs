@@ -1,34 +1,39 @@
-use super::fir_filter::{FirFilter, Window};
+use crate::window::{
+    window_function::WindowFunction,
+    window_function_settings::{self, WindowFunctionSettings},
+};
+
+use super::fir_filter::FirFilter;
 
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct FirFilterSettings {
-    #[serde(default = "default_taps")]
-    taps: u32,
     #[serde(default = "default_normalised_cutoff")]
     normalised_cutoff: f64,
     #[serde(default = "default_window_function")]
-    window_function: Window,
+    window: WindowFunctionSettings,
 }
 
 impl FirFilterSettings {
     pub fn build(self) -> FirFilter {
-        FirFilter::new(self.taps, self.normalised_cutoff, self.window_function)
-    }
-}
+        let taps = self.window.samples;
+        let window = self.window.build_f64();
 
-const fn default_taps() -> u32 {
-    51
+        FirFilter::new(taps, self.normalised_cutoff, window)
+    }
 }
 
 const fn default_normalised_cutoff() -> f64 {
     0.5
 }
 
-const fn default_window_function() -> Window {
-    Window::Triangular
+const fn default_window_function() -> WindowFunctionSettings {
+    WindowFunctionSettings {
+        samples: 51,
+        function: WindowFunction::Hann,
+    }
 }
 
 #[cfg(test)]
@@ -46,14 +51,17 @@ mod tests {
     #[test]
     fn loads_test_settings() {
         let settings =
-            parse("window_function: blackman\ntaps: 131\nnormalised_cutoff: 0.5\n").unwrap();
+            parse("window:\n    function: blackman\n    samples: 131\nnormalised_cutoff: 0.5\n")
+                .unwrap();
 
         assert!(matches!(
             settings,
             FirFilterSettings {
-                taps: 131,
                 normalised_cutoff: 0.5,
-                window_function: Window::Blackman,
+                window: WindowFunctionSettings {
+                    samples: 131,
+                    function: WindowFunction::Blackman
+                },
             }
         ));
     }

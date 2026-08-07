@@ -677,6 +677,7 @@ dependencies = [
  "config",
  "crossterm",
  "libspa",
+ "num-traits",
  "pipewire",
  "realfft",
  "rustfft",

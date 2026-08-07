@@ -1,60 +1,30 @@
 use std::f64;
 
-use serde::Deserialize;
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Window {
-    Rectangular,
-    Triangular,
-    Hann,
-    Blackman,
-}
+use crate::window::window_function::Window;
 
 pub struct FirFilter {
     pub taps: Vec<f32>,
 }
 
 impl FirFilter {
-    pub fn new(taps: u32, normalised_cutoff: f64, window_function: Window) -> FirFilter {
+    pub fn new(taps: u32, normalised_cutoff: f64, window: Window<f64>) -> FirFilter {
         let centre = ((taps - 1) as f64 / 2_f64);
 
-        let ideal_iir = |n: f64| sinc_cutoff(n - centre, normalised_cutoff);
+        let ideal_impulse_response = |n: f64| sinc_cutoff(n - centre, normalised_cutoff);
 
-        type WindowFunction = fn(f64, f64) -> f64;
+        //get the window
+        let mut window = window.samples;
 
-        let window: WindowFunction = match window_function {
-            Window::Rectangular => |_, _| 1_f64,
-            Window::Triangular => |n, taps| {
-                if taps <= 1.0 {
-                    1.0
-                } else {
-                    1.0 - (2.0 * n - (taps - 1.0)).abs() / (taps - 1.0)
-                }
-            },
-            Window::Hann => |n, taps| {
-                0.5_f64 - (0.5_f64 * f64::cos(2_f64 * f64::consts::PI * n / (taps - 1_f64)))
-            },
-            Window::Blackman => |n, taps| {
-                (7938_f64 / 18608_f64)
-                    - (9240_f64 / 18608_f64)
-                        * f64::cos((2_f64 * f64::consts::PI * n) / (taps - 1_f64))
-                    + (1430_f64 / 18608_f64)
-                        * f64::cos((4_f64 * f64::consts::PI * n) / (taps - 1_f64))
-            },
-        };
+        //multiply each tap by the ideal impulse response
+        window
+            .iter_mut()
+            .enumerate()
+            .for_each(|(n, f)| *f *= ideal_impulse_response(n as f64));
 
-        let unnormalised_tap_weights: Vec<f64> = (0..taps)
-            .map(|n| window(n as f64, taps as f64) * ideal_iir(n as f64))
-            .collect();
-
-        let sum: f64 = unnormalised_tap_weights.iter().sum();
-
+        //normalise the window so it sums to 1 and create the FirFilter
+        let sum: f64 = window.iter().sum();
         FirFilter {
-            taps: unnormalised_tap_weights
-                .iter()
-                .map(|n| (n / sum) as f32)
-                .collect(),
+            taps: window.iter().map(|n| (n / sum) as f32).collect(),
         }
     }
 }

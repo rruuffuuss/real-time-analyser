@@ -4,6 +4,7 @@ mod display;
 mod normalise;
 mod settings;
 mod transform;
+mod window;
 
 use std::error::Error;
 use std::path::PathBuf;
