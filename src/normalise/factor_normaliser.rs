@@ -27,7 +27,6 @@ impl Normaliser for FactorNormaliser {
         let mut max: f32 = 0.0;
 
         bars.iter_mut().enumerate().for_each(|(i, b)| {
-            *b *= i as f32;
             max = max.max(*b);
             *b /= self.max_threshold;
         });
