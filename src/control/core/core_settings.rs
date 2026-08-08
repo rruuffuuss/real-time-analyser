@@ -79,7 +79,7 @@ mod tests {
     #[test]
     fn loads_configured_settings() {
         let settings = parse(
-            "sample_rate: 44100\ntransform_size: 2048\nframerate: 60\nwindow:\n    function: Blackman\n    samples: 131",
+            "sample_rate: 44100\ntransform_size: 2048\nframerate: 60\nwindow:\n    function: blackman\n    samples: 131\n",
         )
         .unwrap();
 
