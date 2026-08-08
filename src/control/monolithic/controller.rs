@@ -63,7 +63,8 @@ impl Controller for MonolithicController {
             transform_temp
                 .iter_mut()
                 .zip(b1.iter().chain(b2.iter()))
-                .for_each(|(t, b)| *t = *b);
+                .zip(self.control_core.window.samples.iter())
+                .for_each(|((t, b), w)| *t = *b * w);
             self.control_core
                 .transformer
                 .transform(&mut transform_temp, &mut spectrum_data);

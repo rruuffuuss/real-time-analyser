@@ -41,6 +41,10 @@ mod tests {
     use super::*;
     use crate::control::core::core_settings::CoreSettings;
 
+    use crate::window::{
+        window_function::WindowFunction, window_function_settings::WindowFunctionSettings,
+    };
+
     fn parse(yaml: &str) -> Result<Settings, ConfigError> {
         Config::builder()
             .add_source(File::from_str(yaml, FileFormat::Yaml))
@@ -62,6 +66,10 @@ mod tests {
                     sample_rate: 44100,
                     transform_size: 2048,
                     framerate: 60,
+                    window: WindowFunctionSettings {
+                        samples: None,
+                        function: WindowFunction::Hann
+                    }
                 }
             }
         ));

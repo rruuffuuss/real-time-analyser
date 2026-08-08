@@ -2,6 +2,7 @@ use crate::display::display::Display;
 use crate::normalise::normaliser::Normaliser;
 use crate::transform::merger::Merger;
 use crate::transform::transformer::Transformer;
+use crate::window::window_function::Window;
 
 pub struct ControlCore {
     ///number of samples to analyse, must be power of 2
@@ -21,6 +22,7 @@ pub struct ControlCore {
     ///input channels within an inner vector are averaged together
     // channel_map: Vec<(Vec<u8>, u8)>,*/
     pub transformer: Transformer,
+    pub(crate) window: Window<f32>,
 }
 
 impl ControlCore {
@@ -31,6 +33,7 @@ impl ControlCore {
         display: Display,
         merger: Box<dyn Merger>,
         normaliser: Box<dyn Normaliser>,
+        window: Window<f32>,
     ) -> Self {
         let transformer = Transformer::new(transform_size, merger);
 
@@ -41,6 +44,7 @@ impl ControlCore {
             display,
             normaliser,
             transformer,
+            window,
         }
     }
 }

@@ -81,6 +81,9 @@ const fn default_displayed_decimations() -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::window::{
+        window_function::WindowFunction, window_function_settings::WindowFunctionSettings,
+    };
     use config::{Config, ConfigError, File, FileFormat};
 
     fn parse(yaml: &str) -> Result<ControlSettings, ConfigError> {
@@ -104,6 +107,10 @@ mod tests {
                     sample_rate: 44100,
                     transform_size: 2048,
                     framerate: 60,
+                    window: WindowFunctionSettings {
+                        samples: None,
+                        function: WindowFunction::Hann
+                    }
                 }
             }
         ));
@@ -120,6 +127,10 @@ mod tests {
                     sample_rate: 48000,
                     transform_size: 1024,
                     framerate: 30,
+                    window: WindowFunctionSettings {
+                        samples: None,
+                        function: WindowFunction::Hann
+                    }
                 },
                 filter: _,
                 decimations: 9,

@@ -2,6 +2,9 @@ use crate::{
     display::display::Display, normalise::normaliser::Normaliser, transform::merger::Merger,
 };
 
+use crate::window::window_function::WindowFunction;
+use crate::window::window_function_settings::WindowFunctionSettings;
+
 use super::core::ControlCore;
 
 use serde::Deserialize;
@@ -15,6 +18,8 @@ pub struct CoreSettings {
     pub transform_size: usize,
     #[serde(default = "default_framerate")]
     pub framerate: u16,
+    #[serde(default = "default_window")]
+    pub window: WindowFunctionSettings,
 }
 
 impl CoreSettings {
@@ -24,6 +29,10 @@ impl CoreSettings {
         merger: Box<dyn Merger>,
         normaliser: Box<dyn Normaliser>,
     ) -> ControlCore {
+        let window = self
+            .window
+            .build_f32_with_sample_count(self.transform_size as u32);
+
         ControlCore::new(
             self.transform_size,
             self.sample_rate,
@@ -31,6 +40,7 @@ impl CoreSettings {
             display,
             merger,
             normaliser,
+            window,
         )
     }
 }
@@ -47,6 +57,13 @@ const fn default_framerate() -> u16 {
     30
 }
 
+const fn default_window() -> WindowFunctionSettings {
+    WindowFunctionSettings {
+        samples: None,
+        function: WindowFunction::Hann,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,7 +78,10 @@ mod tests {
 
     #[test]
     fn loads_configured_settings() {
-        let settings = parse("sample_rate: 44100\ntransform_size: 2048\nframerate: 60\n").unwrap();
+        let settings = parse(
+            "sample_rate: 44100\ntransform_size: 2048\nframerate: 60\nwindow:\n    function: Blackman\n    samples: 131",
+        )
+        .unwrap();
 
         assert!(matches!(
             settings,
@@ -69,6 +89,10 @@ mod tests {
                 sample_rate: 44100,
                 transform_size: 2048,
                 framerate: 60,
+                window: WindowFunctionSettings {
+                    samples: Some(131),
+                    function: WindowFunction::Blackman
+                }
             }
         ));
     }
@@ -83,6 +107,10 @@ mod tests {
                 sample_rate: 48000,
                 transform_size: 1024,
                 framerate: 30,
+                window: WindowFunctionSettings {
+                    samples: None,
+                    function: WindowFunction::Hann
+                }
             }
         ));
     }

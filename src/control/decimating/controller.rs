@@ -3,6 +3,7 @@ use super::fir_filter::FirFilter;
 
 use crate::captor;
 use crate::control::Controller;
+use crate::window::window_function::Window;
 
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -94,8 +95,6 @@ impl Controller for DecimatingController {
         let (mut target, mut source): (&mut [f32], &mut [f32]);
 
         for mut recieved in fresh_rx {
-            //may need to update the "partially used tap sample" logic if FFT mutates input chunks
-
             for recieved_chunk in recieved.chunks_exact(transform_size) {
                 //position incoming samples correctly in buffer
                 sample_buffer[tap_num..transform_size + tap_num].copy_from_slice(recieved_chunk);
@@ -145,10 +144,21 @@ impl Controller for DecimatingController {
                         .chunks_exact_mut(chunk_size)
                         .rev(),
                 )
-                .for_each(|(s, f)| {
-                    fft_buffer.clone_from_slice(&f[tap_num..]);
+                .for_each(|(spectrum_chunk, sample_chunk)| {
+                    //apply window function coefficients whilst copying samples into the the fft buffer
+                    fft_buffer
+                        .iter_mut()
+                        .zip(
+                            sample_chunk[tap_num..]
+                                .iter()
+                                .zip(self.control_core.window.samples.iter()),
+                        )
+                        .for_each(|(buf, (sample, window_coef))| *buf = sample * window_coef);
 
-                    self.control_core.transformer.transform(&mut fft_buffer, s)
+                    //fft the sample buffer into the outpute spectrum chunk
+                    self.control_core
+                        .transformer
+                        .transform(&mut fft_buffer, spectrum_chunk)
                 });
 
             if cycle % cycles_per_frame == 0 {

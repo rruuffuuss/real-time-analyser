@@ -7,6 +7,10 @@ controller:
     transform_size: 1024
     framerate: 30
 
+    # set up the window function to apply to the FFT
+    window:
+      function: hann
+
   # the number of times we recursively apply a half band low pass filter, effectively halving the nyquist frequency but doubling the observation window
   decimations: 7
   # the number of decimations to display. Initial decimations may yield frequency spectrum data higher than you require, but these decimations are still required to "get to" lower decimations
