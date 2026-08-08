@@ -5,6 +5,7 @@ use crate::captor;
 use crate::control::Controller;
 use crate::window::window_function::Window;
 
+use std::collections::VecDeque;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 
@@ -37,14 +38,30 @@ impl DecimatingController {
     }
 
     //#[inline(always)]
-    fn decimate(&self, tap_num: usize, source: &[f32], target: &mut [f32]) {
-        target.iter_mut().enumerate().for_each(|(i, yn)| {
-            *yn = source[2 * i..2 * i + tap_num]
-                .iter()
-                .zip(&self.filter.taps)
-                .map(|(xn, b)| -> f32 { xn * b })
-                .sum::<f32>();
-        });
+    fn decimate(
+        &self,
+        tap_num: usize,
+        new_samples: usize,
+        source: &VecDeque<f32>,
+        target: &mut VecDeque<f32>,
+    ) {
+        /* an alternate implementation to this would be using something akin to .windows() over
+         * the new samples in the source VecDeque and multiplying each sample in the window against zipped fir_filter taps
+         * and then summing
+         *
+         * the discontinuity of a VecDeque means I can't figure out a clean way of implementing this at the moment.
+         * another issue is that every other window would be discarded, since the FIR filter is half band
+         */
+
+        for end_sample in ((source.len() - new_samples)..source.len()).step_by(2) {
+            target.push_back(
+                source
+                    .range(end_sample - tap_num..end_sample)
+                    .zip(&self.filter.taps)
+                    .map(|(xn, b)| -> f32 { xn * b })
+                    .sum::<f32>(),
+            );
+        }
     }
 }
 
@@ -64,9 +81,6 @@ impl Controller for DecimatingController {
         let transform_size = self.control_core.transform_size;
         let tap_num = self.filter.taps.len();
 
-        // each 'chunk' is composed of 2 times the number of captured samples + an extra tap_num to hold samples from the prior iteration which weren't fully used in the filter
-        // in hindsight the whole decimation thing could have been more easily implemented with a ring buffer at each decimation level but this feels faster
-        let decimation_size = transform_size / 2; //this is also the amount of samples we capture in one cycle
         let chunk_size = transform_size + tap_num;
         let spectrum_chunk_size =
             self.control_core.display.ideal_bar_count() / (self.displayed_decimations);
@@ -75,14 +89,19 @@ impl Controller for DecimatingController {
                 "Your current configuration would result in less than 1 bar for each decimation.\nReduce the number of decimations or increase the number of bars"
             )
         }
-        let mut sample_buffer = vec![0_f32; chunk_size * decimations];
+        let mut sample_buffer = vec![VecDeque::from(vec![0_f32; chunk_size]); decimations];
+
+        //the number of new samples added to each buffer each cycle
+        let new_samples: Vec<usize> = (0..decimations - 1)
+            .map(|n| (transform_size >> n) as usize)
+            .collect();
+
         let mut spectrum_data = vec![0_f32; self.control_core.display.ideal_bar_count()];
         let transfer_buffer = vec![0_f32; self.control_core.transform_size];
 
         let mut fft_buffer = vec![0_f32; self.control_core.transform_size];
 
         let mut cycle = 1;
-        let mut cur_chunk;
 
         thread::spawn(move || captor::run(transform_size as usize, fresh_tx, stale_rx));
         stale_tx.send(transfer_buffer).unwrap();
@@ -92,42 +111,21 @@ impl Controller for DecimatingController {
             as usize)
             .max(1);
 
-        let (mut target, mut source): (&mut [f32], &mut [f32]);
-
         for mut recieved in fresh_rx {
             for recieved_chunk in recieved.chunks_exact(transform_size) {
                 //position incoming samples correctly in buffer
-                sample_buffer[tap_num..transform_size + tap_num].copy_from_slice(recieved_chunk);
+                sample_buffer[0].drain(..transform_size);
+                sample_buffer[0].extend(recieved_chunk);
 
-                cur_chunk = 0;
+                //windows would be cleaner but can't be mut (makes sense)
+                for (i, new_size) in new_samples.iter().enumerate() {
+                    let (source_slice, target_slice) = sample_buffer.split_at_mut(i + 1);
+                    let source = &source_slice.last().unwrap();
+                    let target = target_slice.first_mut().unwrap();
 
-                while cur_chunk < decimations - 1 {
-                    // move (copy) the existing samples in the the back half the next chunk to the front half
-                    // front ..... back
-                    //   f^^^^l<-f^^^^l
-                    (target, source) = sample_buffer
-                        .split_at_mut((cur_chunk + 1) * chunk_size + tap_num + decimation_size);
-                    target[(cur_chunk + 1) * chunk_size + tap_num..]
-                        .copy_from_slice(&source[..decimation_size]);
+                    target.drain(..(new_size / 2));
 
-                    // decimate into the back half of the next chunk
-                    (source, target) = sample_buffer.split_at_mut((cur_chunk + 1) * chunk_size);
-                    self.decimate(
-                        tap_num,
-                        // decimate from the current buffer
-                        &source[(cur_chunk * chunk_size)..],
-                        // into the second half of the next buffer
-                        &mut target[tap_num + decimation_size..chunk_size],
-                    );
-
-                    // copy 'partially decimated' samples from the end front half of the chunk to the start
-                    // since each sample is decimated twice in this algorithm (so that each stage is updated every cycle),
-                    // these samples are located at the end of the front half, but were partially used when they were in the back half
-                    (target, source) = sample_buffer.split_at_mut(chunk_size * cur_chunk + tap_num);
-                    target[chunk_size * cur_chunk..]
-                        .copy_from_slice(&source[chunk_size - tap_num..chunk_size]);
-
-                    cur_chunk += 1;
+                    self.decimate(tap_num, *new_size, source, target);
                 }
             }
 
@@ -139,18 +137,14 @@ impl Controller for DecimatingController {
             // only iterate chunks that have been fully updated with freshly decimated samples
             spectrum_data
                 .chunks_exact_mut(spectrum_chunk_size)
-                .zip(
-                    sample_buffer[hidden_decimations * chunk_size..]
-                        .chunks_exact_mut(chunk_size)
-                        .rev(),
-                )
+                .zip(sample_buffer[hidden_decimations..].iter().rev())
                 .for_each(|(spectrum_chunk, sample_chunk)| {
                     //apply window function coefficients whilst copying samples into the the fft buffer
                     fft_buffer
                         .iter_mut()
                         .zip(
-                            sample_chunk[tap_num..]
-                                .iter()
+                            sample_chunk
+                                .range(tap_num..)
                                 .zip(self.control_core.window.samples.iter()),
                         )
                         .for_each(|(buf, (sample, window_coef))| *buf = sample * window_coef);
