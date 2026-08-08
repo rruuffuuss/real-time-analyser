@@ -4,7 +4,7 @@ controller:
   # core information required for all controller types
   core:
     sample_rate: 48000
-    transform_size: 1024
+    transform_size: 512
     framerate: 30
 
     # set up the window function to apply to the FFT
@@ -12,15 +12,15 @@ controller:
       function: hann
 
   # the number of times we recursively apply a half band low pass filter, effectively halving the nyquist frequency but doubling the observation window
-  decimations: 7
+  decimations: 8
   # the number of decimations to display. Initial decimations may yield frequency spectrum data higher than you require, but these decimations are still required to "get to" lower decimations
-  displayed_decimations: 5
+  displayed_decimations: 7
 
   # Set up the half band FIR filter used with a decimating controller
   filter:
 
     # ideal frequency cutoff relative to the Nyquist frequency
-    normalised_cutoff: 0.5
+    normalised_cutoff: 0.45
 
     # the number of FIR filter taps
     taps: 131
@@ -92,4 +92,4 @@ normaliser:
   # the "set maximum" is the most recent maximum to cause a change in growth and decay factors by exceeding or falling under the thresholds set by the previous one
   type: factor
   growth_factor: 2.0
-  decay_factor: 0.2
+  decay_factor: 0.0
