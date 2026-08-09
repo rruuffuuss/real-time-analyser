@@ -71,7 +71,7 @@ mod tests {
     fn test_normalisation_normalises_values() {
         normalisation_test(
             &mut vec![0.0_f32, 5.0, 10.0, 25.0, 49.0],
-            &vec![0.0_f32, 0.1, 0.4, 1.5, 3.92],
+            &vec![0.0_f32, 0.1, 0.2, 0.5, 0.98],
             Some(50.0),
             Some(1.2),
             Some(0.1),
@@ -83,7 +83,7 @@ mod tests {
     fn test_normalisation_adjusts_max() {
         let n = normalisation_test(
             &mut vec![0.0_f32, 5.0, 10.0, 25.0, 49.0, 100.0],
-            &vec![0.0_f32, 0.1, 0.4, 1.5, 3.92, 10.0],
+            &vec![0.0_f32, 0.1, 0.2, 0.5, 0.98, 2.0],
             Some(50.0),
             Some(1.2),
             Some(0.1),
@@ -92,7 +92,7 @@ mod tests {
 
         normalisation_test(
             &mut vec![0.0_f32, 12.0, 36.0, 60.0, 117.6],
-            &vec![0.0_f32, 0.02, 0.12, 0.3, 0.784],
+            &vec![0.0_f32, 0.1, 0.3, 0.5, 0.98],
             None,
             None,
             None,
