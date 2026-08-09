@@ -52,7 +52,7 @@ impl Controller for DecimatingController {
         let decimations = self.decimations;
         let hidden_decimations = decimations - self.displayed_decimations;
         let transform_size = self.control_core.transform_size;
-        let tap_num = self.filter.taps.len();
+        let tap_num = self.filter.tap_num;
 
         let chunk_size = transform_size + tap_num;
         let spectrum_chunk_size =
@@ -99,8 +99,7 @@ impl Controller for DecimatingController {
                     target.drain(..(new_size / 2));
                     let source = source.make_contiguous();
 
-                    self.filter
-                        .half_band_into_queue(tap_num, *new_size, source, target);
+                    self.filter.half_band_into_queue(*new_size, source, target);
                 }
             }
 

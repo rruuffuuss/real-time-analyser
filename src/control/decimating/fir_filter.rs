@@ -5,7 +5,10 @@ use crate::window::window_function::Window;
 use std::collections::VecDeque;
 
 pub struct FirFilter {
-    pub taps: Vec<f32>,
+    pub taps: Vec<[f32; f32s_simd_max()]>,
+    ///tap_num should be used when the number of taps is needed
+    ///taps.len() will return the number of SIMD processing arrays the taps are stored in, which is unlikely to be useful
+    pub tap_num: usize,
 }
 
 impl FirFilter {
@@ -17,23 +20,48 @@ impl FirFilter {
         //get the window
         let mut window = window.samples;
 
-        //multiply each tap by the ideal impulse response
+        //multiply each sample by the ideal impulse response
         window
             .iter_mut()
             .enumerate()
             .for_each(|(n, f)| *f *= ideal_impulse_response(n as f64));
 
-        //normalise the window so it sums to 1 and create the FirFilter
+        //normalise the window so it sums to 1
         let sum: f64 = window.iter().sum();
+        window.iter_mut().for_each(|t| *t = *t / sum);
+
+        // create a vector with n dummy taps where n + window.len() = m * f32s_simd_max
+        // using a few dummy vectors to align the tap number with a multiple of the SIMD size is faster than accounting for overflow in a hot loop
+        // when there is no SIMD (size is 1) zero dummy taps are added, having no effect.
+        let mut dummy_taps =
+            vec![0_f64; (f32s_simd_max() - (window.len() % f32s_simd_max())) % f32s_simd_max()];
+        dummy_taps.extend(window.iter());
+        let taps = dummy_taps;
+
+        let tap_num = taps.len();
+
+        let mut tap_arrays: Vec<[f32; f32s_simd_max()]> =
+            Vec::with_capacity(taps.len() / f32s_simd_max());
+
+        for parallel_chunk in taps.chunks_exact(f32s_simd_max()) {
+            let mut parallel_array = [0_f32; f32s_simd_max()];
+
+            for (c, a) in parallel_chunk.iter().zip(parallel_array.iter_mut()) {
+                *a = *c as f32;
+            }
+
+            tap_arrays.push(parallel_array);
+        }
+
         FirFilter {
-            taps: window.iter().map(|n| (n / sum) as f32).collect(),
+            taps: tap_arrays,
+            tap_num,
         }
     }
 
     #[inline(always)]
     pub fn half_band_into_queue(
         &self,
-        tap_num: usize,
         new_samples: usize,
         //source: &VecDeque<f32>,
         source: &[f32],
@@ -48,13 +76,36 @@ impl FirFilter {
          */
 
         for end_sample in ((source.len() - new_samples)..source.len()).step_by(2) {
-            target.push_back(
-                source[end_sample - tap_num..end_sample]
-                    .iter()
-                    .zip(&self.taps)
-                    .fold(0_f32, |acc, (xn, b)| b.mul_add(*xn, acc)),
-            );
+            //use multiple accumulators to utilise loop vectorisation
+            let mut accumulators = [0_f32; f32s_simd_max()];
+
+            //loop through accumulator sized chunks of source
+            source[end_sample - self.tap_num..end_sample]
+                .chunks_exact(f32s_simd_max())
+                .zip(&self.taps)
+                .for_each(|(samples, taps)| {
+                    //add each sample * tap to the corresponding accumulator independently
+                    accumulators
+                        .iter_mut()
+                        .zip(samples.iter().zip(taps))
+                        .for_each(|(acc, (sample, tap))| *acc = sample.mul_add(*tap, *acc))
+                });
+
+            //finally combine accumulators
+            target.push_back(accumulators.iter().sum());
         }
+    }
+}
+
+const fn f32s_simd_max() -> usize {
+    if cfg!(target_feature = "avx512f") {
+        16
+    } else if cfg!(target_feature = "avx") {
+        8
+    } else if cfg!(target_feature = "sse") {
+        4
+    } else {
+        1
     }
 }
 
