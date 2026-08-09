@@ -2,6 +2,8 @@ use std::f64;
 
 use crate::window::window_function::Window;
 
+use std::collections::VecDeque;
+
 pub struct FirFilter {
     pub taps: Vec<f32>,
 }
@@ -25,6 +27,33 @@ impl FirFilter {
         let sum: f64 = window.iter().sum();
         FirFilter {
             taps: window.iter().map(|n| (n / sum) as f32).collect(),
+        }
+    }
+
+    #[inline(always)]
+    pub fn half_band_into_queue(
+        &self,
+        tap_num: usize,
+        new_samples: usize,
+        //source: &VecDeque<f32>,
+        source: &[f32],
+        target: &mut VecDeque<f32>,
+    ) {
+        /* an alternate implementation to this would be using something akin to .windows() over
+         * the new samples in the source VecDeque and multiplying each sample in the window against zipped fir_filter taps
+         * and then summing
+         *
+         * the discontinuity of a VecDeque means I can't figure out a clean way of implementing this at the moment.
+         * another issue is that every other window would be discarded, since the FIR filter is half band
+         */
+
+        for end_sample in ((source.len() - new_samples)..source.len()).step_by(2) {
+            target.push_back(
+                source[end_sample - tap_num..end_sample]
+                    .iter()
+                    .zip(&self.taps)
+                    .fold(0_f32, |acc, (xn, b)| b.mul_add(*xn, acc)),
+            );
         }
     }
 }

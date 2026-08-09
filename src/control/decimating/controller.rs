@@ -36,33 +36,6 @@ impl DecimatingController {
             displayed_decimations,
         }
     }
-
-    //#[inline(always)]
-    fn decimate(
-        &self,
-        tap_num: usize,
-        new_samples: usize,
-        source: &VecDeque<f32>,
-        target: &mut VecDeque<f32>,
-    ) {
-        /* an alternate implementation to this would be using something akin to .windows() over
-         * the new samples in the source VecDeque and multiplying each sample in the window against zipped fir_filter taps
-         * and then summing
-         *
-         * the discontinuity of a VecDeque means I can't figure out a clean way of implementing this at the moment.
-         * another issue is that every other window would be discarded, since the FIR filter is half band
-         */
-
-        for end_sample in ((source.len() - new_samples)..source.len()).step_by(2) {
-            target.push_back(
-                source
-                    .range(end_sample - tap_num..end_sample)
-                    .zip(&self.filter.taps)
-                    .map(|(xn, b)| -> f32 { xn * b })
-                    .sum::<f32>(),
-            );
-        }
-    }
 }
 
 impl Controller for DecimatingController {
@@ -120,12 +93,14 @@ impl Controller for DecimatingController {
                 //windows would be cleaner but can't be mut (makes sense)
                 for (i, new_size) in new_samples.iter().enumerate() {
                     let (source_slice, target_slice) = sample_buffer.split_at_mut(i + 1);
-                    let source = &source_slice.last().unwrap();
+                    let source = source_slice.last_mut().unwrap();
                     let target = target_slice.first_mut().unwrap();
 
                     target.drain(..(new_size / 2));
+                    let source = source.make_contiguous();
 
-                    self.decimate(tap_num, *new_size, source, target);
+                    self.filter
+                        .half_band_into_queue(tap_num, *new_size, source, target);
                 }
             }
 
