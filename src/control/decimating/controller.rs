@@ -3,9 +3,7 @@ use super::fir_filter::FirFilter;
 
 use crate::captor;
 use crate::control::Controller;
-use crate::window::window_function::Window;
-
-use std::collections::VecDeque;
+use crate::control::unchecked_double_mapped_queue::UncheckedDoubleMappedQueue;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 
@@ -62,7 +60,9 @@ impl Controller for DecimatingController {
                 "Your current configuration would result in less than 1 bar for each decimation.\nReduce the number of decimations or increase the number of bars"
             )
         }
-        let mut sample_buffer = vec![VecDeque::from(vec![0_f32; chunk_size]); decimations];
+
+        let mut sample_buffer =
+            vec![UncheckedDoubleMappedQueue::from(&vec![0_f32; chunk_size]); decimations];
 
         //the number of new samples added to each buffer each cycle
         let new_samples: Vec<usize> = (0..decimations - 1)
@@ -87,7 +87,7 @@ impl Controller for DecimatingController {
         for mut recieved in fresh_rx {
             for recieved_chunk in recieved.chunks_exact(transform_size) {
                 //position incoming samples correctly in buffer
-                sample_buffer[0].drain(..transform_size);
+                sample_buffer[0].drain(transform_size);
                 sample_buffer[0].extend(recieved_chunk);
 
                 //windows would be cleaner but can't be mut (makes sense)
@@ -96,10 +96,10 @@ impl Controller for DecimatingController {
                     let source = source_slice.last_mut().unwrap();
                     let target = target_slice.first_mut().unwrap();
 
-                    target.drain(..(new_size / 2));
-                    let source = source.make_contiguous();
+                    target.drain(new_size / 2);
 
-                    self.filter.half_band_into_queue(*new_size, source, target);
+                    self.filter
+                        .half_band_into_udmq(*new_size, source.as_slice(), target);
                 }
             }
 
@@ -117,8 +117,8 @@ impl Controller for DecimatingController {
                     fft_buffer
                         .iter_mut()
                         .zip(
-                            sample_chunk
-                                .range(tap_num..)
+                            sample_chunk.as_slice()[tap_num..]
+                                .iter()
                                 .zip(self.control_core.window.samples.iter()),
                         )
                         .for_each(|(buf, (sample, window_coef))| *buf = sample * window_coef);

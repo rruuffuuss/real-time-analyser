@@ -1,6 +1,9 @@
 use std::f64;
 
-use crate::window::window_function::Window;
+use crate::{
+    control::unchecked_double_mapped_queue::UncheckedDoubleMappedQueue,
+    window::window_function::Window,
+};
 
 use std::collections::VecDeque;
 
@@ -60,12 +63,12 @@ impl FirFilter {
     }
 
     #[inline(always)]
-    pub fn half_band_into_queue(
+    pub fn half_band_into_udmq(
         &self,
         new_samples: usize,
         //source: &VecDeque<f32>,
         source: &[f32],
-        target: &mut VecDeque<f32>,
+        target: &mut UncheckedDoubleMappedQueue<f32>,
     ) {
         /* an alternate implementation to this would be using something akin to .windows() over
          * the new samples in the source VecDeque and multiplying each sample in the window against zipped fir_filter taps
