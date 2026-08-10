@@ -23,7 +23,7 @@ controller:
     normalised_cutoff: 0.45
 
     # the number of FIR filter taps
-    taps: 51
+    taps: 131
 
     # set up the window function used with the half band filter
     window:
