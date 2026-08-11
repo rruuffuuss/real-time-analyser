@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use vmcircbuffer::double_mapped_buffer::DoubleMappedBuffer;
 
 pub struct UncheckedDoubleMappedQueue<T> {

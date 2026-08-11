@@ -73,9 +73,7 @@ impl FirFilter {
         /* an alternate implementation to this would be using something akin to .windows() over
          * the new samples in the source VecDeque and multiplying each sample in the window against zipped fir_filter taps
          * and then summing
-         *
-         * the discontinuity of a VecDeque means I can't figure out a clean way of implementing this at the moment.
-         * another issue is that every other window would be discarded, since the FIR filter is half band
+         * issue is that every other window would be discarded, since the FIR filter is half band
          */
 
         for end_sample in ((source.len() - new_samples)..source.len()).step_by(2) {
@@ -95,8 +93,26 @@ impl FirFilter {
                 });
 
             //finally combine accumulators
-            target.push_back(accumulators.iter().sum());
+            target.push_back(sum_reduction_tree(accumulators));
+            //target.push_back(accumulators.iter().sum());
         }
+    }
+}
+
+#[inline(always)]
+fn sum_reduction_tree(accumulators: [f32; f32s_simd_max()]) -> f32 {
+    if cfg!(target_feature = "avx512f") {
+        (((accumulators[0] + accumulators[8]) + (accumulators[4] + accumulators[12]))
+            + ((accumulators[2] + accumulators[10]) + (accumulators[6] + accumulators[15])))
+            + (((accumulators[1] + accumulators[9]) + (accumulators[5] + accumulators[13]))
+                + ((accumulators[3] + accumulators[11]) + (accumulators[7] + accumulators[16])))
+    } else if cfg!(target_feature = "avx") {
+        ((accumulators[0] + accumulators[4]) + (accumulators[2] + accumulators[6]))
+            + ((accumulators[1] + accumulators[5]) + (accumulators[3] + accumulators[7]))
+    } else if cfg!(target_feature = "sse") {
+        (accumulators[0] + accumulators[2]) + (accumulators[1] + accumulators[3])
+    } else {
+        accumulators[0]
     }
 }
 
