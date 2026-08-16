@@ -83,7 +83,6 @@ pub mod mul_add_fold {
 ///
 /// n is set to the maximum number of f32s the target architecture's SIMD features support
 /// this encourages n subsamples to be processed in parallel via loop vectorisation with multiple multiplications or summations happening in a single instruction
-/// this version uses the fused multiply add internally
 pub mod simd_accumulators_map_sum_linear_add {
     use super::{VecDeque, f32s_simd_max};
 
