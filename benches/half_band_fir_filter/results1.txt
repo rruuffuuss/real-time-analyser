@@ -1,0 +1,187 @@
+
+rufus@pc:~/code/rtv2$ bash benches/half_band_fir_filter/benchcommands.sh
+
+running 34 tests
+iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+test result: ok. 0 passed; 0 failed; 34 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Timer precision: 9 ns
+main                                                                              fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ half_band_fir_filter                                                                         │               │               │               │         │
+   ╰─ runner                                                                                    │               │               │               │         │
+      ├─ v0_map_sum                                                                             │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    4.805 µs      │ 5.033 µs      │ 4.882 µs      │ 4.895 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  31.49 µs      │ 32.8 µs       │ 32 µs         │ 32 µs         │ 50      │ 250000
+      ├─ v1_mul_add_fold                                                                        │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    32.4 µs       │ 33.47 µs      │ 32.66 µs      │ 32.78 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  172.5 µs      │ 178.2 µs      │ 174.4 µs      │ 174.5 µs      │ 50      │ 250000
+      ├─ v2_simd_accumulators__map_sum__linear_add                                              │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.318 µs      │ 1.386 µs      │ 1.34 µs       │ 1.342 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  6.744 µs      │ 7.119 µs      │ 6.901 µs      │ 6.895 µs      │ 50      │ 250000
+      ├─ v3_simd_accumulators__map_sum__reduction_tree                                          │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.321 µs      │ 1.458 µs      │ 1.361 µs      │ 1.367 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  6.963 µs      │ 7.288 µs      │ 7.081 µs      │ 7.082 µs      │ 50      │ 250000
+      ├─ v4_simd_accumulators__mul_add_fold__linear_add                                         │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    34.8 µs       │ 35.87 µs      │ 35.61 µs      │ 35.44 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  164.7 µs      │ 169.9 µs      │ 167.1 µs      │ 167.3 µs      │ 50      │ 250000
+      ├─ v5_simd_accumulators__mul_add_fold__reduction_tree                                     │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    34.1 µs       │ 35.24 µs      │ 34.54 µs      │ 34.68 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  165.1 µs      │ 169.7 µs      │ 166.9 µs      │ 167.1 µs      │ 50      │ 250000
+      ╰─ v6_ilp_accumulators__simd_accumulators__mul_add_fold__linear_add                       │               │               │               │         │
+         ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    33.24 µs      │ 34.3 µs       │ 33.5 µs       │ 33.69 µs      │ 50      │ 250000
+         ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  166.9 µs      │ 171.3 µs      │ 169.2 µs      │ 169 µs        │ 50      │ 250000
+
+
+running 34 tests
+iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+test result: ok. 0 passed; 0 failed; 34 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Timer precision: 9 ns
+main                                                                              fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ half_band_fir_filter                                                                         │               │               │               │         │
+   ╰─ runner                                                                                    │               │               │               │         │
+      ├─ v0_map_sum                                                                             │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    4.947 µs      │ 5.041 µs      │ 4.967 µs      │ 4.97 µs       │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  31.55 µs      │ 33.87 µs      │ 31.93 µs      │ 32.16 µs      │ 50      │ 250000
+      ├─ v1_mul_add_fold                                                                        │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    32.07 µs      │ 33.9 µs       │ 33.11 µs      │ 32.95 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  165.9 µs      │ 170.9 µs      │ 168 µs        │ 168.2 µs      │ 50      │ 250000
+      ├─ v2_simd_accumulators__map_sum__linear_add                                              │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.159 µs      │ 1.226 µs      │ 1.178 µs      │ 1.181 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.665 µs      │ 4.977 µs      │ 4.797 µs      │ 4.794 µs      │ 50      │ 250000
+      ├─ v3_simd_accumulators__map_sum__reduction_tree                                          │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.143 µs      │ 1.236 µs      │ 1.162 µs      │ 1.167 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.609 µs      │ 4.692 µs      │ 4.642 µs      │ 4.643 µs      │ 50      │ 250000
+      ├─ v4_simd_accumulators__mul_add_fold__linear_add                                         │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    42.2 µs       │ 43.56 µs      │ 42.78 µs      │ 42.79 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  200.3 µs      │ 205.7 µs      │ 202.4 µs      │ 202.5 µs      │ 50      │ 250000
+      ├─ v5_simd_accumulators__mul_add_fold__reduction_tree                                     │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    41.47 µs      │ 42.8 µs       │ 41.81 µs      │ 41.88 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  191.9 µs      │ 195.8 µs      │ 193.7 µs      │ 193.8 µs      │ 50      │ 250000
+      ╰─ v6_ilp_accumulators__simd_accumulators__mul_add_fold__linear_add                       │               │               │               │         │
+         ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    37.41 µs      │ 38.92 µs      │ 38.06 µs      │ 38.09 µs      │ 50      │ 250000
+         ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  188.3 µs      │ 192.3 µs      │ 190.5 µs      │ 190.4 µs      │ 50      │ 250000
+
+
+running 34 tests
+iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+test result: ok. 0 passed; 0 failed; 34 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Timer precision: 9 ns
+main                                                                              fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ half_band_fir_filter                                                                         │               │               │               │         │
+   ╰─ runner                                                                                    │               │               │               │         │
+      ├─ v0_map_sum                                                                             │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    4.987 µs      │ 5.221 µs      │ 5.088 µs      │ 5.095 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  31.86 µs      │ 33.01 µs      │ 32.18 µs      │ 32.23 µs      │ 50      │ 250000
+      ├─ v1_mul_add_fold                                                                        │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    7.886 µs      │ 8.249 µs      │ 8.05 µs       │ 8.055 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  55.61 µs      │ 59.61 µs      │ 55.94 µs      │ 56.47 µs      │ 50      │ 250000
+      ├─ v2_simd_accumulators__map_sum__linear_add                                              │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.146 µs      │ 1.176 µs      │ 1.151 µs      │ 1.153 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.601 µs      │ 4.653 µs      │ 4.612 µs      │ 4.615 µs      │ 50      │ 250000
+      ├─ v3_simd_accumulators__map_sum__reduction_tree                                          │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.135 µs      │ 1.158 µs      │ 1.139 µs      │ 1.141 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.544 µs      │ 4.648 µs      │ 4.558 µs      │ 4.57 µs       │ 50      │ 250000
+      ├─ v4_simd_accumulators__mul_add_fold__linear_add                                         │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.005 µs      │ 1.071 µs      │ 1.011 µs      │ 1.015 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.729 µs      │ 5.185 µs      │ 4.812 µs      │ 4.822 µs      │ 50      │ 250000
+      ├─ v5_simd_accumulators__mul_add_fold__reduction_tree                                     │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    996.9 ns      │ 1.043 µs      │ 1.009 µs      │ 1.014 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  5.034 µs      │ 5.482 µs      │ 5.124 µs      │ 5.143 µs      │ 50      │ 250000
+      ╰─ v6_ilp_accumulators__simd_accumulators__mul_add_fold__linear_add                       │               │               │               │         │
+         ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    4.098 µs      │ 4.282 µs      │ 4.155 µs      │ 4.163 µs      │ 50      │ 250000
+         ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  17.74 µs      │ 18.12 µs      │ 17.99 µs      │ 17.97 µs      │ 50      │ 250000
+
+
+running 34 tests
+iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+test result: ok. 0 passed; 0 failed; 34 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Timer precision: 9 ns
+main                                                                              fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ half_band_fir_filter                                                                         │               │               │               │         │
+   ╰─ runner                                                                                    │               │               │               │         │
+      ├─ v0_map_sum                                                                             │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    4.944 µs      │ 5.001 µs      │ 4.964 µs      │ 4.966 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  31.55 µs      │ 31.74 µs      │ 31.6 µs       │ 31.61 µs      │ 50      │ 250000
+      ├─ v1_mul_add_fold                                                                        │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    31.84 µs      │ 32.35 µs      │ 31.91 µs      │ 31.93 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  163.6 µs      │ 164.6 µs      │ 163.9 µs      │ 163.9 µs      │ 50      │ 250000
+      ├─ v2_simd_accumulators__map_sum__linear_add                                              │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.147 µs      │ 1.172 µs      │ 1.152 µs      │ 1.153 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.603 µs      │ 4.688 µs      │ 4.621 µs      │ 4.624 µs      │ 50      │ 250000
+      ├─ v3_simd_accumulators__map_sum__reduction_tree                                          │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.014 µs      │ 1.034 µs      │ 1.022 µs      │ 1.023 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.445 µs      │ 4.489 µs      │ 4.463 µs      │ 4.463 µs      │ 50      │ 250000
+      ├─ v4_simd_accumulators__mul_add_fold__linear_add                                         │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    41.86 µs      │ 43.51 µs      │ 42.72 µs      │ 42.74 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  197.2 µs      │ 205.9 µs      │ 200.1 µs      │ 200.1 µs      │ 50      │ 250000
+      ├─ v5_simd_accumulators__mul_add_fold__reduction_tree                                     │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    41.24 µs      │ 44.19 µs      │ 42 µs         │ 42.2 µs       │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  191.4 µs      │ 198.7 µs      │ 194 µs        │ 194.2 µs      │ 50      │ 250000
+      ╰─ v6_ilp_accumulators__simd_accumulators__mul_add_fold__linear_add                       │               │               │               │         │
+         ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    41.14 µs      │ 42.54 µs      │ 41.56 µs      │ 41.64 µs      │ 50      │ 250000
+         ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  195.6 µs      │ 201.4 µs      │ 197.8 µs      │ 198 µs        │ 50      │ 250000
+
+
+running 34 tests
+iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+test result: ok. 0 passed; 0 failed; 34 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Timer precision: 9 ns
+main                                                                              fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ half_band_fir_filter                                                                         │               │               │               │         │
+   ╰─ runner                                                                                    │               │               │               │         │
+      ├─ v0_map_sum                                                                             │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    4.984 µs      │ 5.131 µs      │ 5.049 µs      │ 5.05 µs       │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  31.9 µs       │ 32.75 µs      │ 32.13 µs      │ 32.23 µs      │ 50      │ 250000
+      ├─ v1_mul_add_fold                                                                        │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    7.882 µs      │ 8.271 µs      │ 7.961 µs      │ 7.994 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  56.7 µs       │ 58.5 µs       │ 57.14 µs      │ 57.37 µs      │ 50      │ 250000
+      ├─ v2_simd_accumulators__map_sum__linear_add                                              │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.147 µs      │ 1.296 µs      │ 1.179 µs      │ 1.183 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.629 µs      │ 4.809 µs      │ 4.71 µs       │ 4.717 µs      │ 50      │ 250000
+      ├─ v3_simd_accumulators__map_sum__reduction_tree                                          │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.011 µs      │ 1.102 µs      │ 1.033 µs      │ 1.034 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.469 µs      │ 4.768 µs      │ 4.561 µs      │ 4.575 µs      │ 50      │ 250000
+      ├─ v4_simd_accumulators__mul_add_fold__linear_add                                         │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.005 µs      │ 1.172 µs      │ 1.033 µs      │ 1.044 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.646 µs      │ 4.865 µs      │ 4.718 µs      │ 4.726 µs      │ 50      │ 250000
+      ├─ v5_simd_accumulators__mul_add_fold__reduction_tree                                     │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    959.1 ns      │ 1.072 µs      │ 983.3 ns      │ 986.5 ns      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.683 µs      │ 4.879 µs      │ 4.751 µs      │ 4.754 µs      │ 50      │ 250000
+      ╰─ v6_ilp_accumulators__simd_accumulators__mul_add_fold__linear_add                       │               │               │               │         │
+         ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    4.012 µs      │ 4.256 µs      │ 4.128 µs      │ 4.135 µs      │ 50      │ 250000
+         ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  17.87 µs      │ 18.52 µs      │ 18.04 µs      │ 18.08 µs      │ 50      │ 250000
+
+
+running 34 tests
+iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+test result: ok. 0 passed; 0 failed; 34 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Timer precision: 9 ns
+main                                                                              fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ half_band_fir_filter                                                                         │               │               │               │         │
+   ╰─ runner                                                                                    │               │               │               │         │
+      ├─ v0_map_sum                                                                             │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    5 µs          │ 5.202 µs      │ 5.06 µs       │ 5.072 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  32.05 µs      │ 33.21 µs      │ 32.56 µs      │ 32.54 µs      │ 50      │ 250000
+      ├─ v1_mul_add_fold                                                                        │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    7.951 µs      │ 8.286 µs      │ 8.058 µs      │ 8.072 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  56.27 µs      │ 58.56 µs      │ 57.5 µs       │ 57.33 µs      │ 50      │ 250000
+      ├─ v2_simd_accumulators__map_sum__linear_add                                              │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.179 µs      │ 1.345 µs      │ 1.205 µs      │ 1.218 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.55 µs       │ 4.788 µs      │ 4.633 µs      │ 4.645 µs      │ 50      │ 250000
+      ├─ v3_simd_accumulators__map_sum__reduction_tree                                          │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.129 µs      │ 1.207 µs      │ 1.146 µs      │ 1.152 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.402 µs      │ 4.639 µs      │ 4.481 µs      │ 4.489 µs      │ 50      │ 250000
+      ├─ v4_simd_accumulators__mul_add_fold__linear_add                                         │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.028 µs      │ 1.182 µs      │ 1.054 µs      │ 1.065 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.661 µs      │ 4.91 µs       │ 4.768 µs      │ 4.777 µs      │ 50      │ 250000
+      ├─ v5_simd_accumulators__mul_add_fold__reduction_tree                                     │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    1.018 µs      │ 1.168 µs      │ 1.043 µs      │ 1.059 µs      │ 50      │ 250000
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  4.715 µs      │ 4.972 µs      │ 4.812 µs      │ 4.826 µs      │ 50      │ 250000
+      ╰─ v6_ilp_accumulators__simd_accumulators__mul_add_fold__linear_add                       │               │               │               │         │
+         ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    3.956 µs      │ 4.105 µs      │ 4.029 µs      │ 4.028 µs      │ 50      │ 250000
+         ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  17.69 µs      │ 18.42 µs      │ 17.95 µs      │ 18 µs         │ 50      │ 250000

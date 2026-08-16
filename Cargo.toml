@@ -9,10 +9,16 @@ debug = true
 name = "rtv2"
 version = "0.1.0"
 edition = "2024"
+autobenches = false
 
 [dev-dependencies]
+cargo-show-asm = "0.2.62"
+divan = "0.1.21"
 rand = "0.10.2"
 
+[[bench]]
+name = "main"
+harness = false
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }
