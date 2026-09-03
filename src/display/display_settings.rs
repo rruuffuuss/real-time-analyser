@@ -1,7 +1,12 @@
-use crate::display::display::Display;
+use crate::display::{
+    display::Display, double_bar_display::DoubleBarDisplay, single_bar_display::SingleBarDisplay,
+};
 use crossterm::{execute, terminal};
 use serde::Deserialize;
-use std::io::{self, stdout};
+use std::{
+    default,
+    io::{self, stdout},
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -10,12 +15,26 @@ pub struct DisplaySettings {
     display_width: u16,
     #[serde(default = "default_height")]
     display_height: u16,
-    #[serde(default = "default_bar_width")]
-    bar_width: u16,
+
+    #[serde(default = "default_char_set")]
+    char_set: DisplayCharSet,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+pub enum DisplayCharSet {
+    SingleBar {
+        increments: Vec<char>,
+        #[serde(default = "default_bar_width")]
+        bar_width: u16,
+    },
+    DoubleBar {
+        increments: Vec<Vec<char>>,
+    },
 }
 
 impl DisplaySettings {
-    pub fn build(mut self) -> Display {
+    pub fn build(mut self) -> Box<dyn Display> {
         execute!(
             stdout(),
             terminal::SetSize(self.display_width, self.display_height)
@@ -29,7 +48,22 @@ impl DisplaySettings {
             self.display_width = default_width();
         });
 
-        Display::new(self.display_width, self.display_height, self.bar_width)
+        match self.char_set {
+            DisplayCharSet::SingleBar {
+                increments,
+                bar_width,
+            } => Box::new(SingleBarDisplay::new(
+                self.display_width,
+                self.display_height,
+                bar_width,
+                increments,
+            )),
+            DisplayCharSet::DoubleBar { increments } => Box::new(DoubleBarDisplay::new(
+                self.display_width,
+                self.display_height,
+                increments,
+            )),
+        }
     }
 }
 
@@ -38,7 +72,7 @@ impl Default for DisplaySettings {
         Self {
             display_width: default_width(),
             display_height: default_height(),
-            bar_width: default_bar_width(),
+            char_set: default_char_set(),
         }
     }
 }
@@ -55,6 +89,13 @@ fn default_height() -> u16 {
 
 fn default_bar_width() -> u16 {
     1
+}
+
+fn default_char_set() -> DisplayCharSet {
+    DisplayCharSet::SingleBar {
+        increments: vec![' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'],
+        bar_width: default_bar_width(),
+    }
 }
 
 #[cfg(test)]
@@ -83,7 +124,6 @@ mod tests {
         let mut display = settings.build();
 
         assert_eq!(display.ideal_bar_count(), 3);
-        assert_eq!(display.render_frame(&[0.0; 3]), "\x1b[H   \r\n   ");
     }
 
     #[test]

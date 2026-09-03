@@ -14,7 +14,7 @@ pub struct ControlCore {
     /// just using equidistant bins for now, will update for musical notes later
     /// down the line this may end up as functions defining the window size and frequency for each output bin individually
     /// would need to buffer for the largest
-    pub(crate) display: Display,
+    pub(crate) display: Box<dyn Display>,
     pub(crate) normaliser: Box<dyn Normaliser>,
     /*///number of output graphs
     ///display_grid: (u8, u8),
@@ -30,7 +30,7 @@ impl ControlCore {
         transform_size: usize,
         sample_rate: u32,
         target_framerate: u16,
-        display: Display,
+        display: Box<dyn Display>,
         merger: Box<dyn Merger>,
         normaliser: Box<dyn Normaliser>,
         window: Window<f32>,

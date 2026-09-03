@@ -30,16 +30,6 @@ controller:
       # the window function
       function: blackman
 
-display:
-  # by default, the display will use the width and height of the terminal from the program is run.
-  # setting them manually will attempt to resize the terminal
-  # this may look very messy if it fails silently
-  # display_width:
-  # display_height:
-  #
-  bar_width: 1
-
-
 
 merger:
 
@@ -93,3 +83,28 @@ normaliser:
   type: factor
   growth_factor: 2.0
   decay_factor: 0.0
+
+
+display:
+  # by default, the display will use the width and height of the terminal
+  # setting them manually will attempt to resize the terminal
+  # this may look very messy if it fails silently
+  # display_width:
+  # display_height:
+
+  # specify a char_set of characters to us for the graph
+  char_set:
+
+    # type: single_bar
+    # increments: [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+    # the width of each output bar in text columns
+    # bar_width: 1
+
+
+    type: double_bar
+    increments:
+      - [' ', '⡀', '⡄', '⡆', '⡇']
+      - ['⢀', '⣀', '⣄', '⣆', '⣇']
+      - ['⢠', '⣠', '⣤', '⣦', '⣧']
+      - ['⢰', '⣰', '⣴', '⣶', '⣷']
+      - ['⢸', '⣸', '⣼', '⣾', '⣿']
