@@ -2,7 +2,7 @@ use crate::transform::merger::aggregator::{self, Aggregator};
 use crate::transform::merger::realisor::{self, Realisor};
 use crate::transform::merger_settings::RealisorSetting::Imaginary;
 
-use super::exponential_merger::ExponentialMerger;
+use super::exponential_merger::{ExponentialMerger, ExponentialMergerBuilder};
 use super::linear_merger::LinearMerger;
 use super::merger::Merger;
 
@@ -114,14 +114,20 @@ impl MergerSettings {
                 tuning_frequency,
                 bars_per_octave,
                 starting_note_offset,
-            } => Box::new(ExponentialMerger::<Ag>::new_custom_function(
-                input_bins,
-                output_bars,
-                sample_rate,
-                tuning_frequency,
-                bars_per_octave,
-                starting_note_offset,
-            )),
+            } => {
+                let builder = ExponentialMergerBuilder::new(
+                    input_bins,
+                    output_bars,
+                    sample_rate,
+                    tuning_frequency,
+                    bars_per_octave,
+                    starting_note_offset,
+                );
+
+                let merger = Box::new(builder.build_merger::<Ag>());
+
+                merger
+            }
         }
     }
 

@@ -66,75 +66,21 @@ impl<Ag: Aggregator> ExponentialMerger<Ag> {
         output_bars: usize,
         sample_rate: u32,
     ) -> ExponentialMerger<Ag> {
-        Self::new_custom_function(
+        let builder = ExponentialMergerBuilder::new(
             input_bins,
             output_bars,
             sample_rate,
             DEFAULT_TUNING_FREQUENCY,
             output_bars / DEFAULT_OCTAVE_RANGE as usize,
             DEFAULT_STARTING_NOTE_OFFSET,
-        )
-    }
+        );
 
-    ///create a new exponential merger defining a custom function for distributing frequency bins to bars
-    ///the highest frequency will be equal to the lowest frequency * 2^(number of output bars / bars per octave)
-    /// the lowest frequency will be the frequency of the note offset below the tuning frequency
-    pub fn new_custom_function(
-        input_bins: usize,
-        output_bars: usize,
-        sample_rate: u32,
-        tuning_frequency: f64,
-        bars_per_octave: usize,
-        starting_note_offset: isize,
-    ) -> ExponentialMerger<Ag> {
-        let builder = ExponentialMergerBuildHelper {
-            input_bins,
-            output_bars,
-            sample_rate,
-            tuning_frequency,
-            bars_per_octave,
-            starting_note_offset,
-            starting_bin_offset: starting_note_offset as f64 - 0.5,
-        };
-
-        let mut bins_per_bar: Vec<usize> = Vec::with_capacity(output_bars);
-
-        let useful_bins = input_bins / 2;
-        let start = builder.frequency_to_bin(builder.note_to_frequency(-1_f64));
-
-        let mut start_bin = start;
-
-        let mut bar = 0;
-
-        loop {
-            let end_bin = builder.frequency_to_bin(builder.note_to_frequency(bar as f64));
-
-            if bar >= output_bars || end_bin > useful_bins {
-                break;
-            }
-
-            bins_per_bar.push(end_bin - start_bin);
-            start_bin = end_bin;
-            bar += 1;
-        }
-
-        ExponentialMerger {
-            bins_per_bar,
-            output_bars,
-
-            start_bin: start,
-            end_bin: useful_bins,
-            _aggregate_strategy: PhantomData::<Ag>,
-        }
+        builder.build_merger::<Ag>()
     }
 }
 
-const DEFAULT_OCTAVE_RANGE: u32 = 8;
-const DEFAULT_TUNING_FREQUENCY: f64 = 440_f64;
-const DEFAULT_STARTING_NOTE_OFFSET: isize = -48;
-
 ///"notes" and "bars" are sort of used interchageably here since the assumption is that the output bars represent notes
-struct ExponentialMergerBuildHelper {
+pub struct ExponentialMergerBuilder {
     input_bins: usize,
     output_bars: usize,
 
@@ -157,7 +103,26 @@ struct ExponentialMergerBuildHelper {
     starting_bin_offset: f64,
 }
 
-impl ExponentialMergerBuildHelper {
+impl ExponentialMergerBuilder {
+    pub fn new(
+        input_bins: usize,
+        output_bars: usize,
+        sample_rate: u32,
+        tuning_frequency: f64,
+        bars_per_octave: usize,
+        starting_note_offset: isize,
+    ) -> ExponentialMergerBuilder {
+        ExponentialMergerBuilder {
+            input_bins,
+            output_bars,
+            sample_rate,
+            tuning_frequency,
+            bars_per_octave,
+            starting_note_offset,
+            starting_bin_offset: starting_note_offset as f64 - 0.5,
+        }
+    }
+
     fn note_to_frequency(&self, frequency: f64) -> f64 {
         self.tuning_frequency
             * 2_f64
@@ -176,7 +141,50 @@ impl ExponentialMergerBuildHelper {
     fn frequency_to_bin(&self, frequency: f64) -> usize {
         ((self.input_bins as f64 / self.sample_rate as f64) * frequency as f64) as usize
     }
+
+    ///create a new exponential merger defining a custom function for distributing frequency bins to bars
+    ///the highest frequency will be equal to the lowest frequency * 2^(number of output bars / bars per octave)
+    /// the lowest frequency will be the frequency of the note offset below the tuning frequency
+    pub fn build_merger<Ag>(&self) -> ExponentialMerger<Ag>
+    where
+        Ag: Aggregator,
+    {
+        let mut bins_per_bar: Vec<usize> = Vec::with_capacity(self.output_bars);
+
+        //since the second half of a transform since it is mirrored
+        let useful_bins = self.input_bins / 2;
+        let start = self.frequency_to_bin(self.note_to_frequency(-1_f64));
+
+        let mut start_bin = start;
+
+        let mut bar = 0;
+
+        loop {
+            let end_bin = self.frequency_to_bin(self.note_to_frequency(bar as f64));
+
+            if bar >= self.output_bars || end_bin > useful_bins {
+                break;
+            }
+
+            bins_per_bar.push(end_bin - start_bin);
+            start_bin = end_bin;
+            bar += 1;
+        }
+
+        ExponentialMerger {
+            bins_per_bar,
+            output_bars: self.output_bars,
+
+            start_bin: start,
+            end_bin: useful_bins,
+            _aggregate_strategy: PhantomData::<Ag>,
+        }
+    }
 }
+
+const DEFAULT_OCTAVE_RANGE: u32 = 8;
+const DEFAULT_TUNING_FREQUENCY: f64 = 440_f64;
+const DEFAULT_STARTING_NOTE_OFFSET: isize = -48;
 
 #[cfg(test)]
 mod tests {
@@ -211,10 +219,8 @@ mod tests {
 
     #[test]
     fn exponential_merger_builder_configuration_merge() {
-        let merger =
-            ExponentialMerger::<aggregator::Mean<realisor::MagnitudeSquared>>::new_custom_function(
-                64, 4, 64, 2.0, 1, 0,
-            );
+        let merger = ExponentialMergerBuilder::new(64, 4, 64, 2.0, 1, 0)
+            .build_merger::<aggregator::Mean<realisor::MagnitudeSquared>>();
 
         assert_eq!(merger.bins_per_bar, vec![1, 1, 3, 6]);
         assert_eq!(merger.output_bars, 4);
