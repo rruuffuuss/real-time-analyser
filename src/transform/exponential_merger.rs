@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use clap::builder::Str;
 use rustfft::num_complex::Complex;
 
 use crate::transform::merger::Merger;
@@ -100,11 +101,12 @@ pub struct ExponentialMergerBuilder {
     starting_note_offset: isize,
 
     ///this is just the starting note offset -0.5 since we want a bar to represent frequency bins from halfway between the previous note to halfway until the next note.
-    starting_bin_offset: f64,
+    ///converted to f64 for convenience
+    starting_bar_offset: f64,
 }
 
 impl ExponentialMergerBuilder {
-    pub fn new(
+    pub(super) fn new(
         input_bins: usize,
         output_bars: usize,
         sample_rate: u32,
@@ -119,19 +121,50 @@ impl ExponentialMergerBuilder {
             tuning_frequency,
             bars_per_octave,
             starting_note_offset,
-            starting_bin_offset: starting_note_offset as f64 - 0.5,
+            starting_bar_offset: starting_note_offset as f64 - 0.5,
         }
     }
 
-    fn note_to_frequency(&self, frequency: f64) -> f64 {
-        self.tuning_frequency
-            * 2_f64
-                .powf((frequency + self.starting_bin_offset as f64) / self.bars_per_octave as f64)
+    fn note_to_frequency(&self, note: f64) -> f64 {
+        self.tuned_note_to_frequency(note, self.tuning_frequency)
     }
 
-    fn frequency_to_note(&self, note: f64) -> f64 {
-        (self.bars_per_octave as f64 * f64::ln(note / self.tuning_frequency as f64) / 2.0_f64.ln())
-            - self.starting_bin_offset as f64
+    fn tuned_note_to_frequency(&self, note: f64, tuning_frequency: f64) -> f64 {
+        tuning_frequency
+            * 2_f64.powf((note + self.starting_bar_offset as f64) / self.bars_per_octave as f64)
+    }
+
+    fn frequency_to_note(&self, frequency: f64) -> f64 {
+        self.tuned_frequency_to_note(frequency, self.tuning_frequency)
+    }
+
+    fn tuned_frequency_to_note(&self, frequency: f64, tuning_frequency: f64) -> f64 {
+        self.offset_tuned_frequency_to_note(frequency, tuning_frequency, self.starting_bar_offset)
+    }
+
+    fn offset_tuned_frequency_to_note(
+        &self,
+        frequency: f64,
+        tuning_frequency: f64,
+        starting_bar_offset: f64,
+    ) -> f64 {
+        self.offset_interval_tuned_frequency_to_note(
+            frequency,
+            tuning_frequency,
+            starting_bar_offset,
+            starting_bar_offset,
+        )
+    }
+
+    fn offset_interval_tuned_frequency_to_note(
+        &self,
+        frequency: f64,
+        tuning_frequency: f64,
+        starting_bar_offset: f64,
+        intervals_per_octave: f64,
+    ) -> f64 {
+        (intervals_per_octave * f64::ln(frequency / tuning_frequency) / 2.0_f64.ln())
+            - starting_bar_offset as f64
     }
 
     fn bin_to_frequency(&self, bin: usize) -> f64 {
@@ -180,7 +213,63 @@ impl ExponentialMergerBuilder {
             _aggregate_strategy: PhantomData::<Ag>,
         }
     }
+
+    pub fn generate_x_axis_labels(
+        &self,
+        labels_per_octave: usize,
+        offset_factor: usize,
+    ) -> Vec<String> {
+        if self.bars_per_octave < labels_per_octave * 4 {
+            panic!("not enough room for this number of labels on the scale");
+        }
+        if self.bars_per_octave % labels_per_octave != 0 {
+            panic!(
+                "the number of bars per octave must divide evenly by the number of labels per octave"
+            )
+        }
+
+        let num_octaves = self.output_bars / self.bars_per_octave;
+
+        let bars_per_label = self.bars_per_octave as f64 / labels_per_octave as f64;
+
+        let labels: Vec<String> = (((0 + offset_factor)..(num_octaves + offset_factor))
+            .map(|o| {
+                (0..labels_per_octave).map(move |l| {
+                    //get the actual frequency of the bar using the builder configuration
+                    let true_freq = self.note_to_frequency(
+                        (o * self.bars_per_octave) as f64 + (l as f64) * bars_per_label,
+                    ); // accounts for configured bar offset
+
+                    //change the frequency back to a note using a standard musical scale
+                    let true_note = self.offset_interval_tuned_frequency_to_note(
+                        true_freq,
+                        AXIS_A0_FREQ,
+                        0.0,
+                        NOTE_LETTERS.len() as f64,
+                    );
+
+                    let rounded_true_note = (true_note.round()) as usize;
+
+                    String::from_iter([
+                        NOTE_LETTERS[rounded_true_note % NOTE_LETTERS.len()],
+                        NOTE_SUPERSCRIPT[rounded_true_note / NOTE_LETTERS.len()],
+                    ])
+                })
+            })
+            .flatten()
+            .collect());
+
+        labels
+
+        // find a nice interval that is a factor/multiple of octaves
+        // use the letter and superscript arrays to find the correct labels with indexing
+        // either return formatted or return array that display can format
+    }
 }
+
+const NOTE_LETTERS: [char; 12] = ['a', '#', 'b', 'c', '#', 'd', '#', 'e', 'f', '#', 'g', '#'];
+const NOTE_SUPERSCRIPT: [char; 10] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const AXIS_A0_FREQ: f64 = 28_f64;
 
 const DEFAULT_OCTAVE_RANGE: u32 = 8;
 const DEFAULT_TUNING_FREQUENCY: f64 = 440_f64;
@@ -189,7 +278,7 @@ const DEFAULT_STARTING_NOTE_OFFSET: isize = -48;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transform::merger::{aggregator, realisor};
+    use crate::transform::merger::{self, aggregator, realisor};
 
     #[test]
     fn exponential_merger_configuration_and_merge() {
@@ -237,5 +326,16 @@ mod tests {
         merger.merge_into_slice(&frequency_bins, &mut output);
 
         assert_eq!(output, vec![1.0, 4.0, 9.0, 16.0]);
+    }
+
+    #[test]
+    fn test_axis_label_generator() {
+        let merger_builder = ExponentialMergerBuilder::new(512, 128, 48000, 28_f64, 16, 0);
+
+        let note_labels = merger_builder.generate_x_axis_labels(4, 0);
+
+        let expected_result = vec!["a0", "#0", "f0"];
+
+        print!("{:?}", note_labels);
     }
 }
