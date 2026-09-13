@@ -25,7 +25,7 @@ pub struct CoreSettings {
 impl CoreSettings {
     pub fn build(
         self,
-        display: Display,
+        display: Box<dyn Display>,
         merger: Box<dyn Merger>,
         normaliser: Box<dyn Normaliser>,
     ) -> ControlCore {
