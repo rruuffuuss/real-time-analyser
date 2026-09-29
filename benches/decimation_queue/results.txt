@@ -1,0 +1,13 @@
+Timer precision: 13 ns
+main                                                                              fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ decimation_queue                                                                             │               │               │               │         │
+   ╰─ runner                                                                                    │               │               │               │         │
+      ├─ _double_mapped_queue_fir_filter_always_wrap                                            │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    38.9 µs       │ 39.14 µs      │ 38.92 µs      │ 38.96 µs      │ 5       │ 250
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  166.7 µs      │ 188.3 µs      │ 187.5 µs      │ 181.3 µs      │ 5       │ 250
+      ├─ _double_mapped_queue_fir_filter_intelligent_wrap                                       │               │               │               │         │
+      │  ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    35.15 µs      │ 36.06 µs      │ 35.55 µs      │ 35.58 µs      │ 5       │ 250
+      │  ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  171.4 µs      │ 173.5 µs      │ 172.9 µs      │ 172.6 µs      │ 5       │ 250
+      ╰─ vecdeque_fir_filter                                                                    │               │               │               │         │
+         ├─ BenchData { tap_count: 51, max_sample_count: 512, decimations: 7 }    35.46 µs      │ 36.01 µs      │ 35.88 µs      │ 35.76 µs      │ 5       │ 250
+         ╰─ BenchData { tap_count: 131, max_sample_count: 1024, decimations: 7 }  170.8 µs      │ 173.5 µs      │ 172.4 µs      │ 172.1 µs      │ 5       │ 250

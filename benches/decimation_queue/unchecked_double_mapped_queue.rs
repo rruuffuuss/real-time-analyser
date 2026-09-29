@@ -5,6 +5,7 @@ pub struct UncheckedDoubleMappedQueue<T> {
     head: usize,
     tail: usize,
     len: usize,
+    capacity: usize,
 }
 
 impl<T> UncheckedDoubleMappedQueue<T>
@@ -12,11 +13,14 @@ where
     T: Copy + Default,
 {
     pub fn new(capacity: usize) -> Self {
+        let buffer = DoubleMappedBuffer::new(capacity).expect("test");
+        let capacity = buffer.capacity();
         Self {
-            buffer: DoubleMappedBuffer::new(capacity).expect("test"),
+            buffer,
             head: 0,
             tail: 0,
             len: 0,
+            capacity,
         }
     }
 
@@ -28,13 +32,24 @@ where
 
         self.tail += src.len();
         self.len += src.len();
-        if self.tail >= self.buffer.capacity() {
-            self.tail = self.tail % self.buffer.capacity();
+        self.wrap();
+    }
+
+    #[inline(always)]
+    pub fn push_back(&mut self, src: T) {
+        // Avoid the slice construction in this benchmark's hot FIR-filter loop.
+        self.push_back_no_wrap(src);
+
+        if self.tail == self.capacity {
+            self.tail = 0;
         }
     }
 
-    pub fn push_back(&mut self, src: T) {
-        //self.extend(&[src]); works but this fn is so hot in fir_filter's half_band_into_udmq that this is worth is
+    /// pushes an item to the back of the queue without checking for overflow
+    /// this function will panic if the number of items pushed or extended to the UncheckedDoubleMappedQueue
+    /// since the last wrap() call (or creation) is less than twice its capacity
+    #[inline(always)]
+    pub fn push_back_no_wrap(&mut self, src: T) {
         unsafe {
             *self
                 .buffer
@@ -44,20 +59,26 @@ where
 
         self.tail += 1;
         self.len += 1;
+    }
 
-        if self.tail == self.buffer.capacity() {
-            self.tail = 0;
+    ///performs the overflow check & wrap logic
+    #[inline(always)]
+    pub fn wrap(&mut self) {
+        if self.tail >= self.capacity {
+            self.tail = self.tail - self.capacity;
         }
     }
 
+    #[inline(always)]
     pub fn drain(&mut self, count: usize) {
         self.len -= count;
         self.head += count;
-        if self.head >= self.buffer.capacity() {
-            self.head = self.head % self.buffer.capacity();
+        if self.head >= self.capacity {
+            self.head = self.head - self.capacity;
         }
     }
 
+    #[inline(always)]
     pub fn as_slice(&self) -> &[T] {
         unsafe {
             let buffer_slice = self.buffer.slice_with_offset(self.head);
@@ -83,13 +104,14 @@ where
 {
     fn clone(&self) -> Self {
         let new_buffer: DoubleMappedBuffer<T> =
-            DoubleMappedBuffer::<T>::new(self.buffer.capacity()).unwrap();
-
+            DoubleMappedBuffer::<T>::new(self.capacity).unwrap();
+        let capacity = new_buffer.capacity();
         let mut new = Self {
             buffer: new_buffer,
             head: self.head,
             tail: self.head,
             len: 0,
+            capacity,
         };
 
         new.extend(self.as_slice());
@@ -99,9 +121,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::collections::VecDeque;
-
-    use super::*;
 
     #[test]
     fn behaviour_mimicks_vecdeque_stress_test() {
@@ -111,7 +130,7 @@ mod tests {
         let mut udmq: UncheckedDoubleMappedQueue<f32> = UncheckedDoubleMappedQueue::new(test_cap);
         let mut vdq: VecDeque<f32> = VecDeque::with_capacity(test_cap);
 
-        let start_capacity = udmq.buffer.capacity();
+        let start_capacity = udmq.capacity;
 
         let mut cur_len = 0_usize;
         let mut cur_space = test_cap;
@@ -143,7 +162,7 @@ mod tests {
             }
         }
 
-        assert_eq!(start_capacity, udmq.buffer.capacity());
+        assert_eq!(start_capacity, udmq.capacity);
     }
 
     #[test]
