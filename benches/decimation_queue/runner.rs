@@ -1,6 +1,7 @@
 use super::implementations::{
     f32s_simd_max, fir_filter_double_mapped_queue_always_wrap,
-    fir_filter_double_mapped_queue_intelligent_wrap, fir_filter_vecdeque,
+    fir_filter_double_mapped_queue_intelligent_wrap, fir_filter_vecdeque_contiguous,
+    fir_filter_vecdeque_split,
 };
 use super::unchecked_double_mapped_queue::UncheckedDoubleMappedQueue;
 use std::collections::VecDeque;
@@ -66,7 +67,49 @@ fn initialized_double_mapped_queues(setup: &BenchSetup) -> Vec<UncheckedDoubleMa
 }
 
 #[divan::bench(sample_count = 5, sample_size = 50, args = BENCHMARK_DATA)]
-fn vecdeque_fir_filter(bencher: divan::Bencher, bench_data: BenchData) {
+fn vecdeque_fir_filter_contiguous(bencher: divan::Bencher, bench_data: BenchData) {
+    bench_vecdeque_fir_filter(
+        bencher,
+        bench_data,
+        |taps, tap_count, new_sample_count, source, target| {
+            let source = source.make_contiguous();
+
+            fir_filter_vecdeque_contiguous::half_band_into_queue(
+                taps,
+                tap_count,
+                new_sample_count,
+                source,
+                target,
+            );
+        },
+    );
+}
+
+#[divan::bench(sample_count = 5, sample_size = 50, args = BENCHMARK_DATA)]
+fn vecdeque_fir_filter_wrap_split(bencher: divan::Bencher, bench_data: BenchData) {
+    bench_vecdeque_fir_filter(
+        bencher,
+        bench_data,
+        |taps, tap_count, new_sample_count, source, target| {
+            let (source1, source2) = source.as_slices();
+
+            fir_filter_vecdeque_split::half_band_into_queue(
+                taps,
+                tap_count,
+                new_sample_count,
+                source1,
+                source2,
+                target,
+            );
+        },
+    );
+}
+
+fn bench_vecdeque_fir_filter(
+    bencher: divan::Bencher,
+    bench_data: BenchData,
+    mut filter_stage: impl FnMut(&[SimdTapChunk], usize, usize, &mut VecDeque<f32>, &mut VecDeque<f32>),
+) {
     let setup = setup_bench(bench_data);
     let mut queues = initialized_vecdeques(&setup);
 
@@ -77,9 +120,7 @@ fn vecdeque_fir_filter(bencher: divan::Bencher, bench_data: BenchData) {
             let target = targets.first_mut().unwrap();
             target.drain(0..new_sample_count / 2);
 
-            let source = source.make_contiguous();
-
-            fir_filter_vecdeque::half_band_into_queue(
+            filter_stage(
                 divan::black_box(&setup.taps),
                 divan::black_box(setup.padded_tap_count),
                 divan::black_box(new_sample_count),
