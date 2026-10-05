@@ -50,11 +50,11 @@ where
     /// since the last wrap() call (or creation) is less than twice its capacity
     #[inline(always)]
     pub fn push_back_no_wrap(&mut self, src: T) {
+        debug_assert!(self.tail < 2 * self.capacity);
+
         unsafe {
-            *self
-                .buffer
-                .slice_with_offset_mut(self.tail)
-                .get_unchecked_mut(0) = src;
+            let base = self.buffer.slice_mut().as_mut_ptr();
+            base.add(self.tail).write(src);
         }
 
         self.tail += 1;
@@ -121,6 +121,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::UncheckedDoubleMappedQueue;
+    use std::collections::VecDeque;
 
     #[test]
     fn behaviour_mimicks_vecdeque_stress_test() {
@@ -136,7 +138,7 @@ mod tests {
         let mut cur_space = test_cap;
 
         for i in 0..test_cycles {
-            let extend_num = (((rand::random::<f32>()) * cur_space as f32) as usize).max(cur_space);
+            let extend_num = (((rand::random::<f32>()) * cur_space as f32) as usize).min(cur_space);
 
             let random_vec: Vec<f32> = (0..extend_num).map(|f| rand::random::<f32>()).collect();
 
@@ -146,7 +148,7 @@ mod tests {
             cur_len += extend_num;
             cur_space -= extend_num;
 
-            let drain_num = (((rand::random::<f32>()) * cur_len as f32) as usize).max(cur_len);
+            let drain_num = (((rand::random::<f32>()) * cur_len as f32) as usize).min(cur_len);
 
             udmq.drain(drain_num);
             vdq.drain(..drain_num);
@@ -182,6 +184,24 @@ mod tests {
         let udmq2 = udmq1.clone();
 
         assert_eq!(udmq1.as_slice(), udmq2.as_slice());
+    }
+
+    #[test]
+    fn push_back_no_wrap_crosses_capacity_before_wrapping() {
+        let mut queue = UncheckedDoubleMappedQueue::<f32>::new(4);
+        let capacity = queue.capacity; // Allocation is rounded up to whole pages.
+        queue.extend(&vec![0.0; capacity - 1]);
+        queue.drain(capacity - 2);
+
+        // write at capacity - 1, capacity and capacity + 1 without wrapping.
+        for sample in [1.0, 2.0, 3.0] {
+            queue.push_back_no_wrap(sample);
+        }
+        assert_eq!(queue.tail, capacity + 2);
+
+        queue.wrap();
+        assert_eq!(queue.tail, 2);
+        assert_eq!(queue.as_slice(), &[0.0, 1.0, 2.0, 3.0]);
     }
 
     #[test]
