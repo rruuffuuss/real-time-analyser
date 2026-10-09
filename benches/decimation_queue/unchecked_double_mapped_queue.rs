@@ -35,6 +35,10 @@ where
         self.wrap();
     }
 
+    pub fn get(&self, index: usize) -> Option<&T> {
+        self.as_slice().get(index)
+    }
+
     #[inline(always)]
     pub fn push_back(&mut self, src: T) {
         // Avoid the slice construction in this benchmark's hot FIR-filter loop.
